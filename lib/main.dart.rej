@@ -1,0 +1,9 @@
+diff a/lib/main.dart b/lib/main.dart	(rejected hunks)
+@@ -11,6 +11,7 @@
+   @override
+   Widget build(BuildContext context) {
+     return MaterialApp(
++      title: 'Nursing Plus',
+       theme: ThemeData(
+         // This is the theme of your application.
+         //
