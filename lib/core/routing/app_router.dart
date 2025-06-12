@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/1_onboarding/ui/screens/onboarding_screen.dart';
+import '../../features/2_auth/presentation/screens/login_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -110,12 +111,6 @@ class AppRouter {
 }
 
 // Placeholder screens
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
-  @override
-  Widget build(BuildContext context) => const Placeholder();
-}
-
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
   @override
