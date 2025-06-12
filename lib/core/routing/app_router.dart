@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/1_onboarding/ui/screens/onboarding_screen.dart';
 import '../../features/2_auth/presentation/screens/login_screen.dart';
+import '../../features/3_home/presentation/screens/home_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -110,13 +111,7 @@ class AppRouter {
   }
 }
 
-// Placeholder screens
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-  @override
-  Widget build(BuildContext context) => const Placeholder();
-}
-
+// Placeholder screens for unimplemented features
 class ProceduresListScreen extends StatelessWidget {
   final int categoryId;
   const ProceduresListScreen({super.key, required this.categoryId});
