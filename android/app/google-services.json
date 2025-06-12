@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1056977117003",
+    "project_id": "nursingplus-eg",
+    "storage_bucket": "nursingplus-eg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1056977117003:android:e676914b05ecb77ee2d2ce",
+        "android_client_info": {
+          "package_name": "com.example.nursingplus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1056977117003-49ku1h7uevhn8kcmgmusbtt07h0v7is7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nursingplus",
+            "certificate_hash": "80c1f9399fc3d2bffc0b74420ac28710aa90d0b2"
+          }
+        },
+        {
+          "client_id": "1056977117003-1kq7klvoa3s8t3ae6d4dd13h8s2tlqll.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgeXEwMRozxa2F423t2WRScL5vTN3zQso"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1056977117003-1kq7klvoa3s8t3ae6d4dd13h8s2tlqll.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1056977117003-mt37t12og11ukho79i1r5n6a1qduaod3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nursingplus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
