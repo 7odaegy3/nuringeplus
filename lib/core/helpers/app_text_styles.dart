@@ -4,62 +4,62 @@ import 'app_colors.dart';
 
 class AppTextStyles {
   // Headings
-  static TextStyle h1 = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get h1 => TextStyle(
     fontSize: 24.sp,
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
+    fontFamily: 'Cairo',
   );
 
-  static TextStyle h2 = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get h2 => TextStyle(
     fontSize: 20.sp,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
+    fontFamily: 'Cairo',
   );
 
-  static TextStyle h3 = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get h3 => TextStyle(
     fontSize: 18.sp,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
+    fontFamily: 'Cairo',
   );
 
   // Body Text
-  static TextStyle bodyLarge = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get bodyLarge => TextStyle(
     fontSize: 16.sp,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.normal,
     color: AppColors.textPrimary,
+    fontFamily: 'Cairo',
   );
 
-  static TextStyle bodyMedium = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get bodyMedium => TextStyle(
     fontSize: 14.sp,
     fontWeight: FontWeight.normal,
     color: AppColors.textPrimary,
+    fontFamily: 'Cairo',
   );
 
-  static TextStyle bodySmall = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get bodySmall => TextStyle(
     fontSize: 12.sp,
     fontWeight: FontWeight.normal,
     color: AppColors.textSecondary,
+    fontFamily: 'Cairo',
   );
 
-  // Button Text
-  static TextStyle buttonLarge = TextStyle(
-    fontFamily: 'Cairo',
+  // Buttons
+  static TextStyle get buttonLarge => TextStyle(
     fontSize: 16.sp,
     fontWeight: FontWeight.w600,
     color: AppColors.textLight,
+    fontFamily: 'Cairo',
   );
 
-  static TextStyle buttonMedium = TextStyle(
-    fontFamily: 'Cairo',
+  static TextStyle get buttonMedium => TextStyle(
     fontSize: 14.sp,
     fontWeight: FontWeight.w600,
     color: AppColors.textLight,
+    fontFamily: 'Cairo',
   );
 
   // Category Text
@@ -70,12 +70,12 @@ class AppTextStyles {
     color: AppColors.textLight,
   );
 
-  // Search Bar Text
-  static TextStyle searchHint = TextStyle(
-    fontFamily: 'Cairo',
+  // Search Bar
+  static TextStyle get searchHint => TextStyle(
     fontSize: 14.sp,
     fontWeight: FontWeight.normal,
     color: AppColors.textSecondary,
+    fontFamily: 'Cairo',
   );
 
   // Implementation Steps

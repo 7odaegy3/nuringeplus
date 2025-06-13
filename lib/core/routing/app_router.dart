@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/1_onboarding/ui/screens/onboarding_screen.dart';
 import '../../features/2_auth/presentation/screens/login_screen.dart';
+import '../../features/3_home/ui/screens/home_screen.dart';
+import '../../features/4_procedures_list/ui/screens/procedures_list_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -16,7 +18,6 @@ class AppRouter {
       _prefs = await SharedPreferences.getInstance();
     } catch (e) {
       print('Error initializing SharedPreferences: $e');
-      // Continue without SharedPreferences
     }
   }
 
@@ -25,8 +26,11 @@ class AppRouter {
     initialLocation: '/',
     redirect: _guard,
     routes: [
-      // Initial route that decides where to go
-      GoRoute(path: '/', redirect: (context, state) => _guard(context, state)),
+      // Initial route
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const HomeScreen(),
+      ),
 
       // Onboarding route
       GoRoute(
@@ -84,46 +88,38 @@ class AppRouter {
     try {
       // Check if user has seen onboarding
       final hasSeenOnboarding = _prefs?.getBool('hasSeenOnboarding') ?? false;
-      if (!hasSeenOnboarding && state.fullPath != '/onboarding') {
+      if (!hasSeenOnboarding &&
+          !state.matchedLocation.startsWith('/onboarding')) {
         return '/onboarding';
       }
 
       // Check if user is authenticated
       final isAuthenticated = FirebaseAuth.instance.currentUser != null;
-      final isAuthRoute = state.fullPath == '/login';
-      final isOnboardingRoute = state.fullPath == '/onboarding';
+      final isAuthRoute = state.matchedLocation.startsWith('/login');
+      final isOnboardingRoute = state.matchedLocation.startsWith('/onboarding');
 
       if (!isAuthenticated && !isAuthRoute && !isOnboardingRoute) {
         return '/login';
       }
 
-      if (isAuthenticated && (isAuthRoute || isOnboardingRoute)) {
-        return '/home';
+      if (isAuthenticated) {
+        if (isAuthRoute || isOnboardingRoute) {
+          return '/home';
+        }
+        if (state.matchedLocation == '/') {
+          return '/home';
+        }
       }
 
       return null;
     } catch (e) {
       print('Error in navigation guard: $e');
-      // Default to onboarding in case of errors
       return '/onboarding';
     }
   }
 }
 
-// Placeholder screens
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-  @override
-  Widget build(BuildContext context) => const Placeholder();
-}
-
-class ProceduresListScreen extends StatelessWidget {
-  final int categoryId;
-  const ProceduresListScreen({super.key, required this.categoryId});
-  @override
-  Widget build(BuildContext context) => const Placeholder();
-}
-
+// Temporary placeholder screens for unimplemented features
 class ProcedureDetailsScreen extends StatelessWidget {
   final int procedureId;
   const ProcedureDetailsScreen({super.key, required this.procedureId});
@@ -188,7 +184,7 @@ class ScaffoldWithBottomNav extends StatelessWidget {
   }
 
   int _calculateSelectedIndex(BuildContext context) {
-    final String location = GoRouterState.of(context).fullPath!;
+    final String location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/saved-procedures')) return 1;
     if (location.startsWith('/settings')) return 2;

@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
+  static FirebaseService get instance => _instance;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -57,9 +59,9 @@ class FirebaseService {
   }
 
   Future<void> saveProcedureForUser(String userId, int procedureId) async {
-    await _firestore.collection('users').doc(userId).update({
+    await _firestore.collection('users').doc(userId).set({
       'saved_procedures': FieldValue.arrayUnion([procedureId]),
-    });
+    }, SetOptions(merge: true));
   }
 
   Future<void> removeProcedureForUser(String userId, int procedureId) async {
@@ -68,18 +70,20 @@ class FirebaseService {
     });
   }
 
-  Stream<List<int>> getSavedProcedureIds(String userId) {
-    return _firestore.collection('users').doc(userId).snapshots().map((
-      snapshot,
-    ) {
-      if (!snapshot.exists) return [];
-      final data = snapshot.data();
-      if (data == null) return [];
+  Future<List<int>> getSavedProcedureIds(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    if (!doc.exists || !doc.data()!.containsKey('saved_procedures')) {
+      return [];
+    }
+    return List<int>.from(doc.data()!['saved_procedures']);
+  }
 
-      final savedProcedures = data['saved_procedures'] as List<dynamic>?;
-      if (savedProcedures == null) return [];
-
-      return savedProcedures.map((id) => id as int).toList();
+  Stream<List<int>> savedProceduresStream(String userId) {
+    return _firestore.collection('users').doc(userId).snapshots().map((doc) {
+      if (!doc.exists || !doc.data()!.containsKey('saved_procedures')) {
+        return [];
+      }
+      return List<int>.from(doc.data()!['saved_procedures']);
     });
   }
 
