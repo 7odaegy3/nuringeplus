@@ -7,10 +7,12 @@ import '../../logic/cubit/procedure_details_cubit.dart';
 
 class ProcedureDetailsScreen extends StatelessWidget {
   final int procedureId;
+  final Gradient? gradient;
 
   const ProcedureDetailsScreen({
     super.key,
     required this.procedureId,
+    this.gradient,
   });
 
   @override
@@ -39,15 +41,17 @@ class ProcedureDetailsScreen extends StatelessWidget {
                 children: [
                   // Gradient Background
                   Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Color(0xFF00796B), // Teal
-                          Color(0xFF2E7D32), // Green
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                    decoration: BoxDecoration(
+                      gradient: gradient ??
+                          const LinearGradient(
+                            // Default gradient
+                            colors: [
+                              Color(0xFF00796B), // Teal
+                              Color(0xFF2E7D32), // Green
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                     ),
                   ),
                   // Content

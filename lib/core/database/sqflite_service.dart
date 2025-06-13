@@ -16,6 +16,8 @@ class Procedure {
   final String? complications;
   final String? requiredTools;
   final String? importantInfo;
+  final int stepCount;
+  final bool hasIllustrations;
   final List<Implementation> implementations;
   final List<Illustration> illustrations;
 
@@ -32,6 +34,8 @@ class Procedure {
     this.complications,
     this.requiredTools,
     this.importantInfo,
+    required this.stepCount,
+    required this.hasIllustrations,
     this.implementations = const [],
     this.illustrations = const [],
   });
@@ -49,6 +53,8 @@ class Procedure {
     String? complications,
     String? requiredTools,
     String? importantInfo,
+    int? stepCount,
+    bool? hasIllustrations,
     List<Implementation>? implementations,
     List<Illustration>? illustrations,
   }) {
@@ -65,6 +71,8 @@ class Procedure {
       complications: complications ?? this.complications,
       requiredTools: requiredTools ?? this.requiredTools,
       importantInfo: importantInfo ?? this.importantInfo,
+      stepCount: stepCount ?? this.stepCount,
+      hasIllustrations: hasIllustrations ?? this.hasIllustrations,
       implementations: implementations ?? this.implementations,
       illustrations: illustrations ?? this.illustrations,
     );
@@ -84,6 +92,8 @@ class Procedure {
       complications: map['complications'],
       requiredTools: map['required_tools'],
       importantInfo: map['important_info'],
+      stepCount: map['step_count'] ?? 0,
+      hasIllustrations: (map['has_illustrations'] ?? 0) == 1,
     );
   }
 }
@@ -160,9 +170,19 @@ class SqliteService {
     // await deleteDatabase(path); // uncomment for testing to clear db on each start
     return await openDatabase(
       path,
-      version: 1, // Start with version 1 for the new schema
+      version: 2, // Incremented version to trigger upgrade
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // For simplicity in development, we're dropping and recreating the tables.
+    // In a production environment, you would use ALTER TABLE statements.
+    await db.execute('DROP TABLE IF EXISTS illustrations');
+    await db.execute('DROP TABLE IF EXISTS implementations');
+    await db.execute('DROP TABLE IF EXISTS procedures');
+    await _createDB(db, newVersion);
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -180,7 +200,9 @@ class SqliteService {
         contraindications TEXT,
         complications TEXT,
         required_tools TEXT,
-        important_info TEXT
+        important_info TEXT,
+        step_count INTEGER NOT NULL DEFAULT 0,
+        has_illustrations INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -233,77 +255,159 @@ class SqliteService {
   }
 
   Future<void> _insertSampleData(Database db) async {
-    // Sample Procedure 1
-    int procedureId1 = await db.insert(
+    // === Category: تمريض أطفال ===
+    int proc1 = await db.insert(
         'procedures',
         {
-          'name': 'قياس ضغط الدم',
+          'name': 'قياس ضغط الدم للطفل',
           'category': 'تمريض أطفال',
-          'category_icon':
-              'child_care', // Using a placeholder string for the icon
-          'info_icon':
-              'lightbulb_outline', // Using a placeholder string for the icon
-          'info_text': '4 خطوة',
-          'about':
-              'نبذة عن قياس ضغط الدم وهو إجراء حيوي لتقييم صحة القلب والأوعية الدموية.',
-          'indications': '• تشخيص الحمى\n• تشخيص النزلات المعوية',
-          'contraindications':
-              '• وجود جرح في الذراع\n• وجود جهاز غسيل كلوي بالذراع',
-          'complications': '• قراءة غير دقيقة\n• ألم بسيط مكان القياس',
-          'required_tools': '• جهاز قياس ضغط الدم\n• سماعة طبية',
-          'important_info': '• تأكد من أن المريض في وضع مريح قبل البدء.'
+          'category_icon': 'child_care',
+          'info_icon': 'lightbulb_outline',
+          'info_text': 'نعم',
+          'about': 'إجراء حيوي لتقييم صحة القلب والأوعية الدموية لدى الأطفال.',
+          'indications': '• متابعة الحالات الحرجة\n• تقييم فعالية أدوية الضغط',
+          'contraindications': '• وجود جرح في الذراع',
+          'complications': '• قراءة غير دقيقة\n• ألم بسيط',
+          'required_tools':
+              '• جهاز قياس ضغط الدم (حجم مناسب للطفل)\n• سماعة طبية',
+          'important_info': '• استخدم الحجم المناسب من الكفة للطفل.',
+          'step_count': 4,
+          'has_illustrations': 1,
         },
         conflictAlgorithm: ConflictAlgorithm.replace);
 
     await db.insert('implementations', {
-      'procedure_id': procedureId1,
+      'procedure_id': proc1,
+      'step_number': 1,
+      'description': 'شرح الإجراء للطفل وذويه.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc1,
+      'step_number': 2,
+      'description': 'تأكد من أن الطفل هادئ ومسترخٍ.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc1,
+      'step_number': 3,
+      'description': 'لف الكفة حول العضد بشكل صحيح.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc1,
+      'step_number': 4,
+      'description': 'سجل القراءة في ملف المريض.'
+    });
+    await db.insert('illustrations',
+        {'procedure_id': proc1, 'image_path': 'assets/images/body_parts.png'});
+    await db.insert('illustrations',
+        {'procedure_id': proc1, 'image_path': 'assets/images/intestine.png'});
+
+    // === Category: تمريض العناية المركزة ===
+    int proc2 = await db.insert('procedures', {
+      'name': 'تركيب أنبوب تغذية أنفي معدي',
+      'category': 'تمريض العناية المركزة',
+      'category_icon': 'local_hospital',
+      'info_text': 'نعم',
+      'about': 'إدخال أنبوب عبر الأنف إلى المعدة للتغذية أو لإعطاء الأدوية.',
+      'indications': '• عدم قدرة المريض على البلع',
+      'contraindications': '• انسداد في المريء',
+      'complications': '• دخول الأنبوب إلى الرئة',
+      'required_tools': '• أنبوب تغذية\n• قفازات\n• جل مزلق',
+      'important_info':
+          '• التأكد من موضع الأنبوب بالأشعة السينية هو المعيار الذهبي.',
+      'step_count': 5,
+      'has_illustrations': 1,
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc2,
       'step_number': 1,
       'description':
-          'Introduce yourself to the patient including your name and role',
-      'rational': 'This helps in building rapport and trust with the patient.',
-      'extra_note': null,
-      'extra_note_icon': null,
+          'قياس طول الأنبوب من الأنف إلى الأذن ثم إلى أسفل عظمة القص.'
     });
     await db.insert('implementations', {
-      'procedure_id': procedureId1,
+      'procedure_id': proc2,
       'step_number': 2,
-      'description':
-          'Confirm the location of the brachial artery by palpating medial to the biceps brachii tendon and lateral to the medial epicondyle of the humerus',
-      'rational':
-          'لضمان وضع السماعة في المكان الصحيح لسماع أصوات كورتكوف بوضوح.',
-      'extra_note': null,
-      'extra_note_icon': null,
+      'description': 'تزييت طرف الأنبوب بالجل.'
     });
     await db.insert('implementations', {
-      'procedure_id': procedureId1,
+      'procedure_id': proc2,
       'step_number': 3,
-      'description': 'Identify the first Korotkoff sound',
-      'rational': null,
-      'extra_note':
-          'أصوات يُسمعها الأطباء عند قياس ضغط الدم بإستخدام سماعة الطبيب',
-      'extra_note_icon': 'brain', // Placeholder for icon name
+      'description': 'إدخال الأنبوب بلطف عبر فتحة الأنف.'
     });
     await db.insert('implementations', {
-      'procedure_id': procedureId1,
+      'procedure_id': proc2,
       'step_number': 4,
       'description':
-          'Document the lowest blood pressure recording in the patient\'s notes',
-      'rational':
-          'التوثيق الدقيق ضروري لمتابعة حالة المريض واتخاذ القرارات العلاجية.',
-      'extra_note': null,
-      'extra_note_icon': null,
+          'اطلب من المريض البلع (إذا كان واعيًا) للمساعدة في مرور الأنبوب.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc2,
+      'step_number': 5,
+      'description': 'تثبيت الأنبوب بشريط لاصق على الأنف.'
+    });
+    await db.insert('illustrations',
+        {'procedure_id': proc2, 'image_path': 'assets/images/intestine.png'});
+
+    int proc3 = await db.insert('procedures', {
+      'name': 'شفط الإفرازات من مجرى الهواء',
+      'category': 'تمريض العناية المركزة',
+      'category_icon': 'local_hospital',
+      'info_text': 'لا',
+      'about':
+          'إجراء لإزالة الإفرازات من الجهاز التنفسي للمرضى الذين لا يستطيعون السعال بفعالية.',
+      'indications': '• تراكم الإفرازات في مجرى الهواء',
+      'required_tools': '• جهاز شفط\n• قسطرة شفط معقمة\n• قفازات معقمة',
+      'step_count': 3,
+      'has_illustrations': 0,
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc3,
+      'step_number': 1,
+      'description': 'توصيل قسطرة الشفط بجهاز الشفط.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc3,
+      'step_number': 2,
+      'description': 'إدخال القسطرة بلطف ودون تطبيق الشفط.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc3,
+      'step_number': 3,
+      'description': 'تطبيق الشفط بشكل متقطع أثناء سحب القسطرة بحركة دائرية.'
     });
 
-    await db.insert('illustrations', {
-      'procedure_id': procedureId1,
-      'image_path':
-          'assets/images/body_parts.png' // Placeholder asset path, user must add this image
+    // === Category: تمريض صحة المجتمع ===
+    int proc4 = await db.insert('procedures', {
+      'name': 'إعطاء التطعيمات',
+      'category': 'تمريض صحة المجتمع',
+      'category_icon': 'groups',
+      'info_text': 'نعم',
+      'about': 'إعطاء اللقاحات للوقاية من الأمراض المعدية.',
+      'important_info': '• التأكد من سلسلة التبريد للقاح.',
+      'step_count': 4,
+      'has_illustrations': 1,
     });
-    await db.insert('illustrations', {
-      'procedure_id': procedureId1,
-      'image_path':
-          'assets/images/intestine.png' // Placeholder asset path, user must add this image
+    await db.insert('implementations', {
+      'procedure_id': proc4,
+      'step_number': 1,
+      'description': 'التحقق من هوية المريض واللقاح المطلوب.'
     });
+    await db.insert('implementations', {
+      'procedure_id': proc4,
+      'step_number': 2,
+      'description': 'تحديد موقع الحقن المناسب (مثل العضلة الدالية).'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc4,
+      'step_number': 3,
+      'description': 'تطهير الجلد بالكحول.'
+    });
+    await db.insert('implementations', {
+      'procedure_id': proc4,
+      'step_number': 4,
+      'description': 'حقن اللقاح والتخلص من الإبرة بأمان.'
+    });
+    await db.insert('illustrations',
+        {'procedure_id': proc4, 'image_path': 'assets/images/body_parts.png'});
   }
 
   // Method to fetch a single procedure with all its details

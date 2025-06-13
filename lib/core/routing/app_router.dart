@@ -75,7 +75,11 @@ class AppRouter {
         path: '/procedure-details/:procedureId',
         builder: (context, state) {
           final procedureId = int.parse(state.pathParameters['procedureId']!);
-          return ProcedureDetailsScreen(procedureId: procedureId);
+          final gradient = state.extra as Gradient?;
+          return ProcedureDetailsScreen(
+            procedureId: procedureId,
+            gradient: gradient,
+          );
         },
       ),
       GoRoute(
@@ -101,8 +105,9 @@ class AppRouter {
   static void goToLogin(BuildContext context) => context.go('/login');
   static void goToProceduresList(BuildContext context, String categoryName) =>
       context.push('/procedures-list/$categoryName');
-  static void goToProcedureDetails(BuildContext context, int procedureId) =>
-      context.push('/procedure-details/$procedureId');
+  static void goToProcedureDetails(BuildContext context, int procedureId,
+          {Object? extra}) =>
+      context.push('/procedure-details/$procedureId', extra: extra);
   static void goToSavedProcedures(BuildContext context) =>
       context.go('/saved-procedures');
   static void goToSettings(BuildContext context) => context.go('/settings');
