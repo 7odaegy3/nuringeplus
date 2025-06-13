@@ -1,12 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../../../core/database/sqflite_service.dart';
-import '../../../3_home/data/models/procedure_model.dart';
 
 // Procedures List State
 class ProceduresListState extends Equatable {
-  final List<ProcedureModel> procedures;
-  final List<ProcedureModel> filteredProcedures;
+  final List<Procedure> procedures;
+  final List<Procedure> filteredProcedures;
   final String? categoryName;
   final bool isLoading;
   final String? error;
@@ -20,8 +19,8 @@ class ProceduresListState extends Equatable {
   });
 
   ProceduresListState copyWith({
-    List<ProcedureModel>? procedures,
-    List<ProcedureModel>? filteredProcedures,
+    List<Procedure>? procedures,
+    List<Procedure>? filteredProcedures,
     String? categoryName,
     bool? isLoading,
     String? error,
@@ -51,23 +50,16 @@ class ProceduresListCubit extends Cubit<ProceduresListState> {
 
   ProceduresListCubit() : super(const ProceduresListState());
 
-  Future<void> loadProcedures(int categoryId) async {
+  Future<void> loadProcedures(String categoryName) async {
     try {
-      emit(state.copyWith(isLoading: true));
+      emit(state.copyWith(isLoading: true, categoryName: categoryName));
 
       final procedures =
-          await _sqliteService.getProceduresByCategory(categoryId);
-      final procedureModels =
-          procedures.map((p) => ProcedureModel.fromMap(p)).toList();
-
-      // Get category name from the first procedure
-      final categoryName = procedures.isNotEmpty
-          ? procedures.first['category_name_ar'] as String
-          : null;
+          await _sqliteService.getProceduresByCategory(categoryName);
 
       emit(state.copyWith(
-        procedures: procedureModels,
-        categoryName: categoryName,
+        procedures: procedures,
+        filteredProcedures: procedures,
         isLoading: false,
       ));
     } catch (e) {
@@ -80,13 +72,12 @@ class ProceduresListCubit extends Cubit<ProceduresListState> {
 
   void searchProcedures(String query) {
     if (query.isEmpty) {
-      emit(state.copyWith(filteredProcedures: []));
+      emit(state.copyWith(filteredProcedures: state.procedures));
       return;
     }
 
     final filteredProcedures = state.procedures.where((procedure) {
-      return procedure.titleAr.contains(query) ||
-          procedure.overviewAr.contains(query);
+      return procedure.name.toLowerCase().contains(query.toLowerCase());
     }).toList();
 
     emit(state.copyWith(filteredProcedures: filteredProcedures));

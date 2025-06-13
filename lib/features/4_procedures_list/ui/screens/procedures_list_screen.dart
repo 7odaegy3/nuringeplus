@@ -9,26 +9,22 @@ import '../../logic/cubit/procedures_list_cubit.dart';
 import '../widgets/procedure_list_item.dart';
 
 class ProceduresListScreen extends StatelessWidget {
-  final int categoryId;
+  final String categoryName;
 
   const ProceduresListScreen({
     super.key,
-    required this.categoryId,
+    required this.categoryName,
   });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ProceduresListCubit()..loadProcedures(categoryId),
+      create: (context) => ProceduresListCubit()..loadProcedures(categoryName),
       child: Scaffold(
         appBar: AppBar(
-          title: BlocBuilder<ProceduresListCubit, ProceduresListState>(
-            builder: (context, state) {
-              return Text(
-                state.categoryName ?? 'قائمة البروسيدجرات',
-                style: AppTextStyles.h2,
-              );
-            },
+          title: Text(
+            categoryName,
+            style: AppTextStyles.h2,
           ),
           centerTitle: true,
         ),

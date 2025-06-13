@@ -1,6 +1,144 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+
+// Data Models based on the new schema
+class Procedure {
+  final int id;
+  final String name;
+  final String? category;
+  final String? categoryIcon;
+  final String? infoIcon;
+  final String? infoText;
+  final String? about;
+  final String? indications;
+  final String? contraindications;
+  final String? complications;
+  final String? requiredTools;
+  final String? importantInfo;
+  final List<Implementation> implementations;
+  final List<Illustration> illustrations;
+
+  Procedure({
+    required this.id,
+    required this.name,
+    this.category,
+    this.categoryIcon,
+    this.infoIcon,
+    this.infoText,
+    this.about,
+    this.indications,
+    this.contraindications,
+    this.complications,
+    this.requiredTools,
+    this.importantInfo,
+    this.implementations = const [],
+    this.illustrations = const [],
+  });
+
+  Procedure copyWith({
+    int? id,
+    String? name,
+    String? category,
+    String? categoryIcon,
+    String? infoIcon,
+    String? infoText,
+    String? about,
+    String? indications,
+    String? contraindications,
+    String? complications,
+    String? requiredTools,
+    String? importantInfo,
+    List<Implementation>? implementations,
+    List<Illustration>? illustrations,
+  }) {
+    return Procedure(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      categoryIcon: categoryIcon ?? this.categoryIcon,
+      infoIcon: infoIcon ?? this.infoIcon,
+      infoText: infoText ?? this.infoText,
+      about: about ?? this.about,
+      indications: indications ?? this.indications,
+      contraindications: contraindications ?? this.contraindications,
+      complications: complications ?? this.complications,
+      requiredTools: requiredTools ?? this.requiredTools,
+      importantInfo: importantInfo ?? this.importantInfo,
+      implementations: implementations ?? this.implementations,
+      illustrations: illustrations ?? this.illustrations,
+    );
+  }
+
+  factory Procedure.fromMap(Map<String, dynamic> map) {
+    return Procedure(
+      id: map['id'],
+      name: map['name'],
+      category: map['category'],
+      categoryIcon: map['category_icon'],
+      infoIcon: map['info_icon'],
+      infoText: map['info_text'],
+      about: map['about'],
+      indications: map['indications'],
+      contraindications: map['contraindications'],
+      complications: map['complications'],
+      requiredTools: map['required_tools'],
+      importantInfo: map['important_info'],
+    );
+  }
+}
+
+class Implementation {
+  final int id;
+  final int procedureId;
+  final int stepNumber;
+  final String description;
+  final String? rational;
+  final String? extraNote;
+  final String? extraNoteIcon;
+
+  Implementation({
+    required this.id,
+    required this.procedureId,
+    required this.stepNumber,
+    required this.description,
+    this.rational,
+    this.extraNote,
+    this.extraNoteIcon,
+  });
+
+  factory Implementation.fromMap(Map<String, dynamic> map) {
+    return Implementation(
+      id: map['id'],
+      procedureId: map['procedure_id'],
+      stepNumber: map['step_number'],
+      description: map['description'],
+      rational: map['rational'],
+      extraNote: map['extra_note'],
+      extraNoteIcon: map['extra_note_icon'],
+    );
+  }
+}
+
+class Illustration {
+  final int id;
+  final int procedureId;
+  final String imagePath;
+
+  Illustration({
+    required this.id,
+    required this.procedureId,
+    required this.imagePath,
+  });
+
+  factory Illustration.fromMap(Map<String, dynamic> map) {
+    return Illustration(
+      id: map['id'],
+      procedureId: map['procedure_id'],
+      imagePath: map['image_path'],
+    );
+  }
+}
 
 class SqliteService {
   static final SqliteService _instance = SqliteService._internal();
@@ -19,97 +157,55 @@ class SqliteService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-
+    // await deleteDatabase(path); // uncomment for testing to clear db on each start
     return await openDatabase(
       path,
-      version: 3, // Increased version number for schema updates
+      version: 1, // Start with version 1 for the new schema
       onCreate: _createDB,
-      onUpgrade: _onUpgrade,
     );
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Add video_url column to procedures table
-      await db.execute('ALTER TABLE procedures ADD COLUMN video_url TEXT');
-
-      // Create user_progress table
-      await db.execute('''
-        CREATE TABLE user_progress(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          procedure_id INTEGER,
-          completed_steps TEXT,
-          last_accessed INTEGER,
-          completion_status TEXT,
-          notes TEXT,
-          FOREIGN KEY (procedure_id) REFERENCES procedures (id)
-        )
-      ''');
-
-      // Create recent_searches table
-      await db.execute('''
-        CREATE TABLE recent_searches(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          search_query TEXT NOT NULL,
-          timestamp INTEGER NOT NULL
-        )
-      ''');
-
-      // Create procedure_checklists table
-      await db.execute('''
-        CREATE TABLE procedure_checklists(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          procedure_id INTEGER,
-          step_id INTEGER,
-          item_text TEXT NOT NULL,
-          is_required BOOLEAN DEFAULT 1,
-          is_completed BOOLEAN DEFAULT 0,
-          FOREIGN KEY (procedure_id) REFERENCES procedures (id),
-          FOREIGN KEY (step_id) REFERENCES procedure_steps (id)
-        )
-      ''');
-    }
-
-    if (oldVersion < 3) {
-      // Add video_url column to procedure_steps table
-      await db.execute('ALTER TABLE procedure_steps ADD COLUMN video_url TEXT');
-    }
-  }
-
   Future<void> _createDB(Database db, int version) async {
-    // Create procedures table
+    // Create the new schema tables
     await db.execute('''
-      CREATE TABLE procedures(
-        id INTEGER PRIMARY KEY,
-        category_id INTEGER,
-        category_name_ar TEXT,
-        title_ar TEXT,
-        overview_ar TEXT,
-        indications_ar TEXT,
-        contraindications_ar TEXT,
-        complications_ar TEXT,
-        tools_ar TEXT,
-        extra_info_ar TEXT,
-        image_urls TEXT,
-        video_url TEXT
+      CREATE TABLE procedures (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT,
+        category_icon TEXT,
+        info_icon TEXT,
+        info_text TEXT,
+        about TEXT,
+        indications TEXT,
+        contraindications TEXT,
+        complications TEXT,
+        required_tools TEXT,
+        important_info TEXT
       )
     ''');
 
-    // Create procedure_steps table
     await db.execute('''
-      CREATE TABLE procedure_steps(
-        id INTEGER PRIMARY KEY,
-        procedure_id INTEGER,
-        step_en TEXT,
-        rational_ar TEXT,
-        video_url TEXT,
-        FOREIGN KEY (procedure_id) REFERENCES procedures (id)
+      CREATE TABLE implementations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        procedure_id INTEGER NOT NULL,
+        step_number INTEGER NOT NULL,
+        description TEXT NOT NULL,
+        rational TEXT,
+        extra_note TEXT,
+        extra_note_icon TEXT,
+        FOREIGN KEY (procedure_id) REFERENCES procedures (id) ON DELETE CASCADE
       )
     ''');
 
-    // Create user_progress table
+    await db.execute('''
+      CREATE TABLE illustrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        procedure_id INTEGER NOT NULL,
+        image_path TEXT NOT NULL,
+        FOREIGN KEY (procedure_id) REFERENCES procedures (id) ON DELETE CASCADE
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE user_progress(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,7 +219,6 @@ class SqliteService {
       )
     ''');
 
-    // Create recent_searches table
     await db.execute('''
       CREATE TABLE recent_searches(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,305 +228,158 @@ class SqliteService {
       )
     ''');
 
-    // Create procedure_checklists table
-    await db.execute('''
-      CREATE TABLE procedure_checklists(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        procedure_id INTEGER,
-        step_id INTEGER,
-        item_text TEXT NOT NULL,
-        is_required BOOLEAN DEFAULT 1,
-        is_completed BOOLEAN DEFAULT 0,
-        FOREIGN KEY (procedure_id) REFERENCES procedures (id),
-        FOREIGN KEY (step_id) REFERENCES procedure_steps (id)
-      )
-    ''');
-
-    // Insert sample data
+    // Insert new sample data
     await _insertSampleData(db);
   }
 
   Future<void> _insertSampleData(Database db) async {
-    // Sample Categories:
-    // 1: تمريض الأطفال
-    // 2: الرعاية المركزة
+    // Sample Procedure 1
+    int procedureId1 = await db.insert(
+        'procedures',
+        {
+          'name': 'قياس ضغط الدم',
+          'category': 'تمريض أطفال',
+          'category_icon':
+              'child_care', // Using a placeholder string for the icon
+          'info_icon':
+              'lightbulb_outline', // Using a placeholder string for the icon
+          'info_text': '4 خطوة',
+          'about':
+              'نبذة عن قياس ضغط الدم وهو إجراء حيوي لتقييم صحة القلب والأوعية الدموية.',
+          'indications': '• تشخيص الحمى\n• تشخيص النزلات المعوية',
+          'contraindications':
+              '• وجود جرح في الذراع\n• وجود جهاز غسيل كلوي بالذراع',
+          'complications': '• قراءة غير دقيقة\n• ألم بسيط مكان القياس',
+          'required_tools': '• جهاز قياس ضغط الدم\n• سماعة طبية',
+          'important_info': '• تأكد من أن المريض في وضع مريح قبل البدء.'
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
 
-    // Insert sample procedures
-    final procedures = [
-      {
-        'id': 1,
-        'category_id': 1,
-        'category_name_ar': 'تمريض الأطفال',
-        'title_ar': 'قياس درجة حرارة الطفل',
-        'overview_ar': 'قياس درجة حرارة الجسم للطفل باستخدام الترمومتر الرقمي',
-        'indications_ar': jsonEncode(['متابعة الحالة الصحية', 'تشخيص الحمى']),
-        'contraindications_ar': jsonEncode(['لا يوجد']),
-        'complications_ar':
-            jsonEncode(['قراءات غير دقيقة في حالة عدم الاستخدام الصحيح']),
-        'tools_ar': jsonEncode(['ترمومتر رقمي', 'معقم', 'قفازات']),
-        'extra_info_ar': 'يجب تنظيف الترمومتر قبل وبعد الاستخدام',
-        'image_urls': jsonEncode([]),
-        'video_url': jsonEncode('')
-      },
-      {
-        'id': 2,
-        'category_id': 2,
-        'category_name_ar': 'الرعاية المركزة',
-        'title_ar': 'تركيب القسطرة الوريدية',
-        'overview_ar': 'إجراء تركيب القسطرة الوريدية للمريض في العناية المركزة',
-        'indications_ar':
-            jsonEncode(['إعطاء الأدوية الوريدية', 'سحب عينات الدم']),
-        'contraindications_ar':
-            jsonEncode(['التهاب في موقع الإدخال', 'اضطرابات النزيف']),
-        'complications_ar': jsonEncode(['العدوى', 'النزيف', 'تجلط الدم']),
-        'tools_ar':
-            jsonEncode(['قسطرة وريدية', 'معقم', 'قفازات معقمة', 'ضمادات']),
-        'extra_info_ar':
-            'يجب مراقبة موقع القسطرة يومياً للكشف عن أي علامات التهاب',
-        'image_urls': jsonEncode([]),
-        'video_url': jsonEncode('')
-      }
-    ];
+    await db.insert('implementations', {
+      'procedure_id': procedureId1,
+      'step_number': 1,
+      'description':
+          'Introduce yourself to the patient including your name and role',
+      'rational': 'This helps in building rapport and trust with the patient.',
+      'extra_note': null,
+      'extra_note_icon': null,
+    });
+    await db.insert('implementations', {
+      'procedure_id': procedureId1,
+      'step_number': 2,
+      'description':
+          'Confirm the location of the brachial artery by palpating medial to the biceps brachii tendon and lateral to the medial epicondyle of the humerus',
+      'rational':
+          'لضمان وضع السماعة في المكان الصحيح لسماع أصوات كورتكوف بوضوح.',
+      'extra_note': null,
+      'extra_note_icon': null,
+    });
+    await db.insert('implementations', {
+      'procedure_id': procedureId1,
+      'step_number': 3,
+      'description': 'Identify the first Korotkoff sound',
+      'rational': null,
+      'extra_note':
+          'أصوات يُسمعها الأطباء عند قياس ضغط الدم بإستخدام سماعة الطبيب',
+      'extra_note_icon': 'brain', // Placeholder for icon name
+    });
+    await db.insert('implementations', {
+      'procedure_id': procedureId1,
+      'step_number': 4,
+      'description':
+          'Document the lowest blood pressure recording in the patient\'s notes',
+      'rational':
+          'التوثيق الدقيق ضروري لمتابعة حالة المريض واتخاذ القرارات العلاجية.',
+      'extra_note': null,
+      'extra_note_icon': null,
+    });
 
-    for (var procedure in procedures) {
-      await db.insert('procedures', procedure);
-    }
-
-    // Insert sample procedure steps
-    final steps = [
-      {
-        'id': 1,
-        'procedure_id': 1,
-        'step_en': 'Explain the procedure to the child and caregiver',
-        'rational_ar': 'بناء الثقة وتقليل القلق والحصول على التعاون',
-        'video_url': 'https://example.com/videos/explain_procedure.mp4'
-      },
-      {
-        'id': 2,
-        'procedure_id': 1,
-        'step_en': 'Clean the thermometer with alcohol swab',
-        'rational_ar': 'منع انتقال العدوى',
-        'video_url': 'https://example.com/videos/clean_thermometer.mp4'
-      },
-      {
-        'id': 3,
-        'procedure_id': 2,
-        'step_en': 'Perform hand hygiene and wear sterile gloves',
-        'rational_ar': 'منع انتقال العدوى والحفاظ على التعقيم',
-        'video_url': 'https://example.com/videos/hand_hygiene.mp4'
-      },
-      {
-        'id': 4,
-        'procedure_id': 2,
-        'step_en': 'Select appropriate vein and apply tourniquet',
-        'rational_ar': 'تسهيل الوصول للوريد وتحديد أفضل موقع للإدخال',
-        'video_url': 'https://example.com/videos/vein_selection.mp4'
-      }
-    ];
-
-    for (var step in steps) {
-      await db.insert('procedure_steps', step);
-    }
-
-    // Insert sample checklist items
-    final checklistItems = [
-      {
-        'procedure_id': 1,
-        'step_id': 1,
-        'item_text': 'Introduce yourself to the child and caregiver',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 1,
-        'step_id': 1,
-        'item_text': 'Explain the purpose of temperature measurement',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 1,
-        'step_id': 2,
-        'item_text': 'Check thermometer battery',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 1,
-        'step_id': 2,
-        'item_text': 'Use new alcohol swab',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 2,
-        'step_id': 3,
-        'item_text': 'Perform hand hygiene for at least 20 seconds',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 2,
-        'step_id': 3,
-        'item_text': 'Check gloves size and integrity',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 2,
-        'step_id': 4,
-        'item_text': 'Assess vein visibility and palpability',
-        'is_required': 1,
-        'is_completed': 0
-      },
-      {
-        'procedure_id': 2,
-        'step_id': 4,
-        'item_text': 'Check tourniquet elasticity',
-        'is_required': 0,
-        'is_completed': 0
-      }
-    ];
-
-    for (var item in checklistItems) {
-      await db.insert('procedure_checklists', item);
-    }
+    await db.insert('illustrations', {
+      'procedure_id': procedureId1,
+      'image_path':
+          'assets/images/body_parts.png' // Placeholder asset path, user must add this image
+    });
+    await db.insert('illustrations', {
+      'procedure_id': procedureId1,
+      'image_path':
+          'assets/images/intestine.png' // Placeholder asset path, user must add this image
+    });
   }
 
-  // CRUD Operations for Procedures
-  Future<List<Map<String, dynamic>>> getProcedures() async {
+  // Method to fetch a single procedure with all its details
+  Future<Procedure?> getProcedureById(int id) async {
     final db = await database;
-    return await db.query('procedures');
-  }
-
-  Future<List<Map<String, dynamic>>> getProceduresByCategory(
-      int categoryId) async {
-    final db = await database;
-    return await db.query(
-      'procedures',
-      where: 'category_id = ?',
-      whereArgs: [categoryId],
-    );
-  }
-
-  Future<Map<String, dynamic>?> getProcedureById(int id) async {
-    final db = await database;
-    final results = await db.query(
+    final List<Map<String, dynamic>> procedureMaps = await db.query(
       'procedures',
       where: 'id = ?',
       whereArgs: [id],
-      limit: 1,
     );
-    return results.isNotEmpty ? results.first : null;
-  }
 
-  // CRUD Operations for Procedure Steps
-  Future<List<Map<String, dynamic>>> getProcedureSteps(int procedureId) async {
-    final db = await database;
-    return await db.query(
-      'procedure_steps',
+    if (procedureMaps.isEmpty) {
+      return null;
+    }
+
+    final procedureData = procedureMaps.first;
+
+    final List<Map<String, dynamic>> implementationMaps = await db.query(
+      'implementations',
       where: 'procedure_id = ?',
-      whereArgs: [procedureId],
+      whereArgs: [id],
+      orderBy: 'step_number ASC',
+    );
+
+    final List<Map<String, dynamic>> illustrationMaps = await db.query(
+      'illustrations',
+      where: 'procedure_id = ?',
+      whereArgs: [id],
+    );
+
+    final implementations =
+        implementationMaps.map((map) => Implementation.fromMap(map)).toList();
+    final illustrations =
+        illustrationMaps.map((map) => Illustration.fromMap(map)).toList();
+
+    return Procedure.fromMap(procedureData).copyWith(
+      implementations: implementations,
+      illustrations: illustrations,
     );
   }
 
-  // Search Procedures
-  Future<List<Map<String, dynamic>>> searchProcedures(String query) async {
+  // Method to fetch all procedures (without details for list view)
+  Future<List<Procedure>> getAllProcedures() async {
     final db = await database;
-    return await db.query(
+    final List<Map<String, dynamic>> maps = await db.query('procedures');
+
+    return List.generate(maps.length, (i) {
+      return Procedure.fromMap(maps[i]);
+    });
+  }
+
+  // Method to search procedures by name
+  Future<List<Procedure>> searchProcedures(String query) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'procedures',
-      where: 'title_ar LIKE ? OR overview_ar LIKE ?',
-      whereArgs: ['%$query%', '%$query%'],
+      where: 'name LIKE ?',
+      whereArgs: ['%$query%'],
     );
+
+    return List.generate(maps.length, (i) {
+      return Procedure.fromMap(maps[i]);
+    });
   }
 
-  // New methods for user progress
-  Future<void> updateUserProgress(
-      String userId, int procedureId, List<int> completedSteps) async {
+  // Method to get procedures by category name
+  Future<List<Procedure>> getProceduresByCategory(String categoryName) async {
     final db = await database;
-    await db.insert(
-      'user_progress',
-      {
-        'user_id': userId,
-        'procedure_id': procedureId,
-        'completed_steps': jsonEncode(completedSteps),
-        'last_accessed': DateTime.now().millisecondsSinceEpoch,
-        'completion_status':
-            completedSteps.isEmpty ? 'not_started' : 'in_progress'
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    final List<Map<String, dynamic>> maps = await db.query(
+      'procedures',
+      where: 'category = ?',
+      whereArgs: [categoryName],
     );
-  }
 
-  Future<Map<String, dynamic>?> getUserProgress(
-      String userId, int procedureId) async {
-    final db = await database;
-    final results = await db.query(
-      'user_progress',
-      where: 'user_id = ? AND procedure_id = ?',
-      whereArgs: [userId, procedureId],
-      limit: 1,
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  // Recent searches methods
-  Future<void> addRecentSearch(String userId, String query) async {
-    final db = await database;
-    await db.insert(
-      'recent_searches',
-      {
-        'user_id': userId,
-        'search_query': query,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getRecentSearches(String userId,
-      {int limit = 10}) async {
-    final db = await database;
-    return await db.query(
-      'recent_searches',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'timestamp DESC',
-      limit: limit,
-    );
-  }
-
-  // Checklist methods
-  Future<void> addChecklistItem(
-      int procedureId, int stepId, String itemText, bool isRequired) async {
-    final db = await database;
-    await db.insert(
-      'procedure_checklists',
-      {
-        'procedure_id': procedureId,
-        'step_id': stepId,
-        'item_text': itemText,
-        'is_required': isRequired ? 1 : 0,
-      },
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getChecklistItems(
-      int procedureId, int stepId) async {
-    final db = await database;
-    return await db.query(
-      'procedure_checklists',
-      where: 'procedure_id = ? AND step_id = ?',
-      whereArgs: [procedureId, stepId],
-    );
-  }
-
-  Future<void> updateChecklistItemStatus(int itemId, bool isCompleted) async {
-    final db = await database;
-    await db.update(
-      'procedure_checklists',
-      {'is_completed': isCompleted ? 1 : 0},
-      where: 'id = ?',
-      whereArgs: [itemId],
-    );
+    return List.generate(maps.length, (i) {
+      return Procedure.fromMap(maps[i]);
+    });
   }
 }

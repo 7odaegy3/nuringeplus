@@ -95,7 +95,7 @@ class HomeScreen extends StatelessWidget {
                               category: category,
                               onTap: () => AppRouter.goToProceduresList(
                                 context,
-                                category.id,
+                                category.nameAr,
                               ),
                             ),
                           );

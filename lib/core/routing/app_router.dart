@@ -65,10 +65,10 @@ class AppRouter {
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
-        path: '/procedures-list/:categoryId',
+        path: '/procedures-list/:categoryName',
         builder: (context, state) {
-          final categoryId = int.parse(state.pathParameters['categoryId']!);
-          return ProceduresListScreen(categoryId: categoryId);
+          final categoryName = state.pathParameters['categoryName']!;
+          return ProceduresListScreen(categoryName: categoryName);
         },
       ),
       GoRoute(
@@ -99,10 +99,10 @@ class AppRouter {
   // Navigation helpers
   static void goToHome(BuildContext context) => context.go('/home');
   static void goToLogin(BuildContext context) => context.go('/login');
-  static void goToProceduresList(BuildContext context, int categoryId) =>
-      context.go('/procedures-list/$categoryId');
+  static void goToProceduresList(BuildContext context, String categoryName) =>
+      context.push('/procedures-list/$categoryName');
   static void goToProcedureDetails(BuildContext context, int procedureId) =>
-      context.go('/procedure-details/$procedureId');
+      context.push('/procedure-details/$procedureId');
   static void goToSavedProcedures(BuildContext context) =>
       context.go('/saved-procedures');
   static void goToSettings(BuildContext context) => context.go('/settings');

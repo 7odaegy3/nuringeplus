@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../core/database/sqflite_service.dart';
 import '../../../../core/helpers/app_colors.dart';
 import '../../../../core/helpers/app_text_styles.dart';
-import '../../../3_home/data/models/procedure_model.dart';
 
 class ProcedureListItem extends StatelessWidget {
-  final ProcedureModel procedure;
+  final Procedure procedure;
   final VoidCallback onTap;
 
   const ProcedureListItem({
@@ -55,7 +55,7 @@ class ProcedureListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    procedure.titleAr,
+                    procedure.name,
                     style: AppTextStyles.bodyLarge.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -63,12 +63,13 @@ class ProcedureListItem extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4.h),
-                  Text(
-                    procedure.overviewAr,
-                    style: AppTextStyles.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (procedure.about != null)
+                    Text(
+                      procedure.about!,
+                      style: AppTextStyles.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                 ],
               ),
             ),

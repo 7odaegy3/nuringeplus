@@ -3,13 +3,12 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/api/firebase_service.dart';
 import '../../../../core/database/sqflite_service.dart';
 import '../../data/models/category_model.dart';
-import '../../data/models/procedure_model.dart';
 
 // Home States
 class HomeState extends Equatable {
   final List<CategoryModel> categories;
-  final List<ProcedureModel> savedProcedures;
-  final List<ProcedureModel> searchResults;
+  final List<Procedure> savedProcedures;
+  final List<Procedure> searchResults;
   final bool isGuest;
   final String? userName;
   final bool isLoading;
@@ -27,8 +26,8 @@ class HomeState extends Equatable {
 
   HomeState copyWith({
     List<CategoryModel>? categories,
-    List<ProcedureModel>? savedProcedures,
-    List<ProcedureModel>? searchResults,
+    List<Procedure>? savedProcedures,
+    List<Procedure>? searchResults,
     bool? isGuest,
     String? userName,
     bool? isLoading,
@@ -74,17 +73,20 @@ class HomeCubit extends Cubit<HomeState> {
       final userName = user?.displayName;
 
       // Get categories from SQLite
-      final procedures = await _sqliteService.getProcedures();
-      final categories = procedures
-          .map((p) => CategoryModel(
-                id: p['category_id'] as int,
-                nameAr: p['category_name_ar'] as String,
-              ))
-          .toSet()
-          .toList();
+      final procedures = await _sqliteService.getAllProcedures();
+      final categoriesMap = <String, CategoryModel>{};
+      for (var p in procedures) {
+        if (p.category != null) {
+          // Assuming a procedure's category name can be used as a unique key for the category.
+          // You might need a more robust way to handle category IDs if they are not just names.
+          categoriesMap[p.category!] =
+              CategoryModel(id: p.id, nameAr: p.category!);
+        }
+      }
+      final categories = categoriesMap.values.toList();
 
       // Get saved procedures if user is logged in
-      List<ProcedureModel> savedProcedures = [];
+      List<Procedure> savedProcedures = [];
       if (!isGuest) {
         final savedIds =
             await _firebaseService.getSavedProcedureIds(user.uid).first;
@@ -92,7 +94,7 @@ class HomeCubit extends Cubit<HomeState> {
         for (var id in savedIds) {
           final proc = await _sqliteService.getProcedureById(id);
           if (proc != null) {
-            savedProcedures.add(ProcedureModel.fromMap(proc));
+            savedProcedures.add(proc);
           }
         }
       }
@@ -120,9 +122,7 @@ class HomeCubit extends Cubit<HomeState> {
 
     try {
       final results = await _sqliteService.searchProcedures(query);
-      emit(state.copyWith(
-        searchResults: results.map((p) => ProcedureModel.fromMap(p)).toList(),
-      ));
+      emit(state.copyWith(searchResults: results));
     } catch (e) {
       emit(state.copyWith(
         error: 'حدث خطأ في البحث: ${e.toString()}',
