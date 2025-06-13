@@ -142,8 +142,8 @@ class _HomeScreenState extends State<HomeScreen> {
               return CategoryCard(
                 category: state.categories[index],
                 onTap: () {
-                  context.read<HomeCubit>().loadProceduresByCategory(
-                    state.categories[index].id,
+                  context.go(
+                    '/home/procedures-list/${state.categories[index].id}',
                   );
                 },
               );

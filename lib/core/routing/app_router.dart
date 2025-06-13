@@ -1,16 +1,17 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../features/1_onboarding/ui/screens/onboarding_screen.dart';
-import '../../features/2_auth/presentation/screens/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/3_home/presentation/screens/home_screen.dart';
+import '../../features/4_procedures_list/presentation/screens/procedures_list_screen.dart';
+import '../../features/4_procedures_list/presentation/cubit/procedures_list_cubit.dart';
 
 class AppRouter {
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
-  static final _shellNavigatorKey = GlobalKey<NavigatorState>();
-
   static SharedPreferences? _prefs;
+
+  static final _shellNavigatorKey = GlobalKey<NavigatorState>();
+  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
   static Future<void> init() async {
     try {
@@ -21,27 +22,50 @@ class AppRouter {
     }
   }
 
-  static final GoRouter router = GoRouter(
+  static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
     redirect: _guard,
     routes: [
-      // Initial route that decides where to go
-      GoRoute(path: '/', redirect: (context, state) => _guard(context, state)),
-
-      // Onboarding route
-      GoRoute(
-        path: '/onboarding',
-        builder: (context, state) => const OnboardingScreen(),
-      ),
-
-      // Auth route
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-
       // Shell route for bottom navigation
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => ScaffoldWithBottomNav(child: child),
+        builder: (context, state, child) => Scaffold(
+          body: child,
+          bottomNavigationBar: NavigationBar(
+            onDestinationSelected: (index) {
+              switch (index) {
+                case 0:
+                  context.go('/home');
+                  break;
+                case 1:
+                  context.go('/saved-procedures');
+                  break;
+                case 2:
+                  context.go('/settings');
+                  break;
+              }
+            },
+            selectedIndex: _calculateSelectedIndex(context),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'الرئيسية',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bookmark_outline),
+                selectedIcon: Icon(Icons.bookmark),
+                label: 'المحفوظات',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'الإعدادات',
+              ),
+            ],
+          ),
+        ),
         routes: [
           // Home route
           GoRoute(
@@ -51,15 +75,16 @@ class AppRouter {
               // Nested routes under home
               GoRoute(
                 path: 'procedures-list/:categoryId',
-                builder: (context, state) => ProceduresListScreen(
-                  categoryId: int.parse(state.pathParameters['categoryId']!),
+                builder: (context, state) => BlocProvider(
+                  create: (context) => ProceduresListCubit(),
+                  child: ProceduresListScreen(
+                    categoryId: int.parse(state.pathParameters['categoryId']!),
+                  ),
                 ),
               ),
               GoRoute(
                 path: 'procedure-details/:procedureId',
-                builder: (context, state) => ProcedureDetailsScreen(
-                  procedureId: int.parse(state.pathParameters['procedureId']!),
-                ),
+                builder: (context, state) => const Placeholder(),
               ),
             ],
           ),
@@ -67,13 +92,13 @@ class AppRouter {
           // Saved procedures route
           GoRoute(
             path: '/saved-procedures',
-            builder: (context, state) => const SavedProceduresScreen(),
+            builder: (context, state) => const Placeholder(),
           ),
 
           // Settings route
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
+            builder: (context, state) => const Placeholder(),
           ),
         ],
       ),
@@ -109,16 +134,17 @@ class AppRouter {
       return '/onboarding';
     }
   }
+
+  static int _calculateSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).fullPath!;
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/saved-procedures')) return 1;
+    if (location.startsWith('/settings')) return 2;
+    return 0;
+  }
 }
 
 // Placeholder screens for unimplemented features
-class ProceduresListScreen extends StatelessWidget {
-  final int categoryId;
-  const ProceduresListScreen({super.key, required this.categoryId});
-  @override
-  Widget build(BuildContext context) => const Placeholder();
-}
-
 class ProcedureDetailsScreen extends StatelessWidget {
   final int procedureId;
   const ProcedureDetailsScreen({super.key, required this.procedureId});
@@ -136,57 +162,4 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
   @override
   Widget build(BuildContext context) => const Placeholder();
-}
-
-class ScaffoldWithBottomNav extends StatelessWidget {
-  final Widget child;
-  const ScaffoldWithBottomNav({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: NavigationBar(
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/home');
-              break;
-            case 1:
-              context.go('/saved-procedures');
-              break;
-            case 2:
-              context.go('/settings');
-              break;
-          }
-        },
-        selectedIndex: _calculateSelectedIndex(context),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'الرئيسية',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'المحفوظات',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'الإعدادات',
-          ),
-        ],
-      ),
-    );
-  }
-
-  int _calculateSelectedIndex(BuildContext context) {
-    final String location = GoRouterState.of(context).fullPath!;
-    if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/saved-procedures')) return 1;
-    if (location.startsWith('/settings')) return 2;
-    return 0;
-  }
 }

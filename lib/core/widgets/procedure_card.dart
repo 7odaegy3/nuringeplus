@@ -1,89 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../features/3_home/data/models/procedure_model.dart';
 import '../helpers/app_colors.dart';
 import '../helpers/app_text_styles.dart';
 
 class ProcedureCard extends StatelessWidget {
-  final String title;
-  final String category;
-  final int stepsCount;
-  final bool isViewed;
+  final ProcedureModel procedure;
   final VoidCallback onTap;
   final bool isSaved;
-  final VoidCallback? onSaveToggle;
 
   const ProcedureCard({
     super.key,
-    required this.title,
-    required this.category,
-    required this.stepsCount,
-    this.isViewed = false,
+    required this.procedure,
     required this.onTap,
     this.isSaved = false,
-    this.onSaveToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
+    // Calculate total steps from all arrays
+    final totalSteps = [
+      ...procedure.indicationsAr,
+      ...procedure.contraindicationsAr,
+      ...procedure.complicationsAr,
+      ...procedure.toolsAr,
+    ].length;
+
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
           padding: EdgeInsets.all(16.r),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            gradient: isSaved
+                ? const LinearGradient(
+                    colors: [
+                      AppColors.savedGradientStart,
+                      AppColors.savedGradientEnd,
+                    ],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                  )
+                : null,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              // Title and Steps Count
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (onSaveToggle != null)
-                    IconButton(
-                      icon: Icon(
-                        isSaved ? Icons.bookmark : Icons.bookmark_outline,
-                        color: isSaved
-                            ? AppColors.primary
-                            : AppColors.iconInactive,
-                      ),
-                      onPressed: onSaveToggle,
-                    ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: AppTextStyles.h3,
-                      textAlign: TextAlign.right,
-                      textDirection: TextDirection.rtl,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    '$stepsCount خطوة',
-                    style: AppTextStyles.bodySmall,
-                    textDirection: TextDirection.rtl,
-                  ),
-                  SizedBox(width: 8.w),
-                  Icon(
-                    isViewed ? Icons.visibility : Icons.visibility_outlined,
-                    size: 16.r,
-                    color: AppColors.iconInactive,
-                  ),
-                  SizedBox(width: 16.w),
+                  // Steps Count
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: 8.w,
@@ -91,15 +64,70 @@ class ProcedureCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4.r),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
-                    child: Text(
-                      category,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.checklist_rounded,
+                          size: 16.r,
+                          color: AppColors.primary,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '$totalSteps خطوة',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Title
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w),
+                      child: Text(
+                        procedure.titleAr,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.end,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      textDirection: TextDirection.rtl,
                     ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+              // Overview
+              Text(
+                procedure.overviewAr,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 8.h),
+              // Category
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    procedure.categoryNameAr,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  SizedBox(width: 4.w),
+                  Icon(
+                    Icons.folder_outlined,
+                    color: AppColors.primary,
+                    size: 16.r,
                   ),
                 ],
               ),
