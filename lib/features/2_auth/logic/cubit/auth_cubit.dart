@@ -11,7 +11,7 @@ class AuthCubit extends Cubit<AuthState> {
 
   Future<void> signInWithGoogle() async {
     try {
-      emit(AuthLoading());
+      emit(const AuthLoading());
       print('Starting Google Sign In process...');
 
       final userCredential = await _firebaseService.signInWithGoogle();
@@ -31,7 +31,7 @@ class AuthCubit extends Cubit<AuthState> {
 
   Future<void> signOut() async {
     try {
-      emit(AuthLoading());
+      emit(const AuthLoading());
       await _firebaseService.signOut();
       emit(const AuthInitial());
     } catch (e) {

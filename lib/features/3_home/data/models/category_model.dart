@@ -3,14 +3,16 @@ import 'package:equatable/equatable.dart';
 class CategoryModel extends Equatable {
   final int id;
   final String nameAr;
+  final String? iconName;
 
   const CategoryModel({
     required this.id,
     required this.nameAr,
+    this.iconName,
   });
 
   @override
-  List<Object?> get props => [id, nameAr];
+  List<Object?> get props => [id, nameAr, iconName];
 
   @override
   bool get stringify => true;

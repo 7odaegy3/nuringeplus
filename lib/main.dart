@@ -54,7 +54,8 @@ class NursingPlusApp extends StatelessWidget {
               textDirection: TextDirection.rtl,
               child: MediaQuery(
                 // Ensure proper text scaling
-                data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: TextScaler.linear(1.0)),
                 child: child!,
               ),
             );

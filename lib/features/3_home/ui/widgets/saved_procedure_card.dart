@@ -19,65 +19,27 @@ class SavedProcedureCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withOpacity(0.2),
+              AppColors.primary.withOpacity(0.1),
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16.r),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title and Category
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        procedure.name,
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4.h),
-                      if (procedure.category != null)
-                        Text(
-                          procedure.category!,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textSecondary,
-                  size: 24.sp,
-                ),
-              ],
-            ),
-            SizedBox(height: 8.h),
-
-            // Overview (using 'about' field as a replacement)
-            if (procedure.about != null)
-              Text(
-                procedure.about!,
-                style: AppTextStyles.bodySmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-          ],
+        child: Text(
+          procedure.name,
+          textAlign: TextAlign.right,
+          style: AppTextStyles.bodyLarge.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

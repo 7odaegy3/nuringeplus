@@ -117,7 +117,7 @@ class SettingsScreen extends StatelessWidget {
       leading: Icon(icon, color: AppColors.primary),
       title: Text(title, style: AppTextStyles.bodyMedium),
       trailing: trailing ??
-          Icon(
+          const Icon(
             Icons.chevron_right,
             color: AppColors.textSecondary,
           ),

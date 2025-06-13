@@ -79,8 +79,8 @@ class HomeCubit extends Cubit<HomeState> {
         if (p.category != null) {
           // Assuming a procedure's category name can be used as a unique key for the category.
           // You might need a more robust way to handle category IDs if they are not just names.
-          categoriesMap[p.category!] =
-              CategoryModel(id: p.id, nameAr: p.category!);
+          categoriesMap[p.category!] = CategoryModel(
+              id: p.id, nameAr: p.category!, iconName: p.categoryIcon);
         }
       }
       final categories = categoriesMap.values.toList();
