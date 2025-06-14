@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/firebase_service.dart';
 import '../../features/6_saved_procedures/logic/cubit/saved_procedures_cubit.dart';
+import '../../features/5_procedure_details/logic/cubit/procedure_details_cubit.dart';
 
 // Import screens
 import '../../features/1_onboarding/ui/screens/onboarding_screen.dart';
@@ -30,6 +31,22 @@ class AppRouter {
   static Widget _wrapWithProvider(Widget child) {
     return BlocProvider<SavedProceduresCubit>(
       create: (context) => SavedProceduresCubit()..loadSavedProcedures(),
+      child: child,
+    );
+  }
+
+  static Widget _wrapWithProcedureDetailsProvider(
+      Widget child, int procedureId) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<SavedProceduresCubit>(
+          create: (context) => SavedProceduresCubit()..loadSavedProcedures(),
+        ),
+        BlocProvider<ProcedureDetailsCubit>(
+          create: (context) =>
+              ProcedureDetailsCubit()..loadProcedure(procedureId),
+        ),
+      ],
       child: child,
     );
   }
@@ -86,10 +103,13 @@ class AppRouter {
         builder: (context, state) {
           final procedureId = int.parse(state.pathParameters['procedureId']!);
           final gradient = state.extra as Gradient?;
-          return _wrapWithProvider(ProcedureDetailsScreen(
-            procedureId: procedureId,
-            gradient: gradient,
-          ));
+          return _wrapWithProcedureDetailsProvider(
+            ProcedureDetailsScreen(
+              procedureId: procedureId,
+              gradient: gradient,
+            ),
+            procedureId,
+          );
         },
       ),
       GoRoute(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/custom_animations.dart';
 import '../../../../core/database/sqflite_service.dart';
 import '../../logic/cubit/procedure_details_cubit.dart';
 import '../../../6_saved_procedures/logic/cubit/saved_procedures_cubit.dart';
@@ -12,22 +13,55 @@ class ProcedureDetailsScreen extends StatefulWidget {
   final Gradient? gradient;
 
   const ProcedureDetailsScreen({
-    super.key,
+    Key? key,
     required this.procedureId,
     this.gradient,
-  });
+  }) : super(key: key);
 
   @override
   State<ProcedureDetailsScreen> createState() => _ProcedureDetailsScreenState();
 }
 
-class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen> {
+class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late ScrollController _scrollController;
+  bool _isScrolled = false;
   final SqliteService _sqliteService = SqliteService();
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+    _animationController.forward();
+
     _checkIfSaved();
+  }
+
+  void _onScroll() {
+    if (_scrollController.offset > 140 && !_isScrolled) {
+      setState(() => _isScrolled = true);
+    } else if (_scrollController.offset <= 140 && _isScrolled) {
+      setState(() => _isScrolled = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkIfSaved() async {
@@ -46,45 +80,269 @@ class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final defaultGradient = LinearGradient(
+      colors: [
+        Theme.of(context).primaryColor.withOpacity(0.8),
+        Theme.of(context).primaryColor,
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تفاصيل الإجراء'),
-        actions: [
-          BlocBuilder<SavedProceduresCubit, SavedProceduresState>(
-            builder: (context, state) {
-              final isSaved =
-                  state.procedures.any((p) => p.id == widget.procedureId);
-              return IconButton(
-                icon: Icon(
-                  isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  color: isSaved ? Colors.blue : null,
-                ),
-                onPressed: _toggleSave,
-              );
-            },
-          ),
-        ],
-      ),
-      body: FutureBuilder<Procedure>(
-        future: _sqliteService.getProcedureById(widget.procedureId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: BlocBuilder<ProcedureDetailsCubit, ProcedureDetailsState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+          if (state.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48.sp,
+                    color: Colors.red,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    state.error!,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
-          if (!snapshot.hasData) {
-            return const Center(child: Text('Procedure not found'));
+          if (state.procedure == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    size: 48.sp,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'لم يتم العثور على الإجراء',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
-          final procedure = snapshot.data!;
           return CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildHeader(procedure),
-              _buildContent(procedure),
+              SliverAppBar(
+                expandedHeight: 200.h,
+                pinned: true,
+                stretch: true,
+                elevation: _isScrolled ? 4 : 0,
+                backgroundColor: _isScrolled
+                    ? (widget.gradient?.colors.first ??
+                        Theme.of(context).primaryColor)
+                    : Colors.transparent,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: widget.gradient ?? defaultGradient,
+                    ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.6),
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.4),
+                              ],
+                              stops: const [0.0, 0.5, 1.0],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 20.h,
+                          left: 20.w,
+                          right: 20.w,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                state.procedure!.name,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24.sp,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [
+                                    Shadow(
+                                      offset: const Offset(1, 1),
+                                      blurRadius: 3,
+                                      color: Colors.black.withOpacity(0.3),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Icon(
+                                    _getCategoryIcon(
+                                        state.procedure!.category ?? ''),
+                                    color: Colors.white70,
+                                    size: 16.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    state.procedure!.category ?? '',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14.sp,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                leading: IconButton(
+                  icon: Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                  onPressed: () => context.pop(),
+                ),
+                actions: [
+                  BlocBuilder<SavedProceduresCubit, SavedProceduresState>(
+                    builder: (context, savedState) {
+                      final isSaved = savedState.procedures
+                          .any((p) => p.id == widget.procedureId);
+                      return Padding(
+                        padding: EdgeInsets.only(right: 8.w),
+                        child: IconButton(
+                          icon: Container(
+                            padding: EdgeInsets.all(8.w),
+                            decoration: BoxDecoration(
+                              color: Colors.black12,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isSaved ? Icons.bookmark : Icons.bookmark_border,
+                              color: Colors.white,
+                            ),
+                          ),
+                          onPressed: () {
+                            if (state.procedure != null) {
+                              context
+                                  .read<SavedProceduresCubit>()
+                                  .toggleSaveProcedure(state.procedure!);
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(16.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (state.procedure!.about != null) ...[
+                        _buildSectionTitle(
+                            'نبذة عن الإجراء', Icons.info_outline),
+                        SizedBox(height: 8.h),
+                        Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            state.procedure!.about!,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              color: Colors.black87,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+                      ],
+                      if (state.procedure!.indications != null)
+                        _buildExpandableCard(
+                          title: 'دواعي الاستخدام',
+                          content: state.procedure!.indications!,
+                          icon: Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                        ),
+                      if (state.procedure!.contraindications != null)
+                        _buildExpandableCard(
+                          title: 'موانع الاستخدام',
+                          content: state.procedure!.contraindications!,
+                          icon: Icons.warning_amber_rounded,
+                          color: Colors.red.shade700,
+                        ),
+                      if (state.procedure!.complications != null)
+                        _buildExpandableCard(
+                          title: 'المضاعفات المحتملة',
+                          content: state.procedure!.complications!,
+                          icon: Icons.error_outline,
+                          color: Colors.orange.shade700,
+                        ),
+                      if (state.procedure!.requiredTools != null)
+                        _buildExpandableCard(
+                          title: 'الأدوات المطلوبة',
+                          content: state.procedure!.requiredTools!,
+                          icon: Icons.medical_services_outlined,
+                          color: Colors.blue.shade700,
+                        ),
+                      SizedBox(height: 24.h),
+                      _buildImplementationsSection(
+                          state.procedure!.implementations),
+                      SizedBox(height: 16.h),
+                      if (state.procedure!.hasIllustrations)
+                        _buildIllustrationsSection(
+                            state.procedure!.illustrations),
+                    ],
+                  ),
+                ),
+              ),
             ],
           );
         },
@@ -94,72 +352,169 @@ class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen> {
 
   Widget _buildHeader(Procedure procedure) {
     return SliverToBoxAdapter(
-      child: Container(
-        padding: EdgeInsets.all(20.w),
-        decoration: BoxDecoration(
-          gradient: widget.gradient ??
-              const LinearGradient(
-                colors: [Colors.blue, Colors.lightBlue],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+      child: CustomAnimations.fadeSlideTransition(
+        animation: _fadeAnimation,
+        child: Container(
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (procedure.about != null) ...[
+                Text(
+                  'About',
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  procedure.about!,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Theme.of(context).primaryColor,
+          size: 24.sp,
+        ),
+        SizedBox(width: 8.w),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImplementationsSection(List<Implementation> implementations) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('خطوات الإجراء', Icons.format_list_numbered),
+        SizedBox(height: 16.h),
+        ...implementations.map((step) => _StepWidget(step: step)),
+      ],
+    );
+  }
+
+  Widget _buildIllustrationsSection(List<Illustration> illustrations) {
+    return _IllustrationsSection(illustrations: illustrations);
+  }
+
+  Widget _buildExpandableCard({
+    required String title,
+    required String content,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: Icon(icon, color: color),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          childrenPadding: EdgeInsets.all(16.w),
           children: [
-            Text(
-              procedure.name,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24.sp,
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                  color: color.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                content,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: Colors.black87,
+                  height: 1.5,
+                ),
               ),
             ),
-            if (procedure.category != null) ...[
-              SizedBox(height: 8.h),
-              Text(
-                procedure.category!,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 16.sp,
-                ),
-              ),
-            ],
-            if (procedure.about != null) ...[
-              SizedBox(height: 16.h),
-              Text(
-                procedure.about!,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContent(Procedure procedure) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'عدد الخطوات: ${procedure.stepCount}',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            // Add more content sections here
-          ],
-        ),
-      ),
-    );
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'respiratory':
+      case 'تنفسي':
+        return Icons.air;
+      case 'cardiac':
+      case 'قلبي':
+        return Icons.favorite;
+      case 'neurological':
+      case 'عصبي':
+        return Icons.psychology;
+      case 'gastrointestinal':
+      case 'هضمي':
+        return Icons.lunch_dining;
+      case 'urinary':
+      case 'بولي':
+        return Icons.water_drop;
+      case 'musculoskeletal':
+      case 'عضلي هيكلي':
+        return Icons.accessibility_new;
+      case 'skin':
+      case 'جلدي':
+        return Icons.healing;
+      case 'reproductive':
+      case 'تناسلي':
+        return Icons.pregnant_woman;
+      case 'endocrine':
+      case 'غدد صماء':
+        return Icons.biotech;
+      case 'immune':
+      case 'مناعي':
+        return Icons.security;
+      case 'general':
+      case 'عام':
+        return Icons.medical_services;
+      default:
+        return Icons.category_outlined;
+    }
   }
 }
 
@@ -303,75 +658,131 @@ class _StepWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 15,
-                backgroundColor: Colors.green,
-                child: Text(
-                  step.stepNumber.toString(),
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(step.description,
-                        style: const TextStyle(fontSize: 16)),
-                  ],
-                ),
-              ),
-              if (step.rational != null && step.rational!.isNotEmpty)
-                IconButton(
-                  icon: Icon(Icons.lightbulb, color: Colors.amber.shade700),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Rational'),
-                        content: Text(step.rational!),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Close'),
-                          )
-                        ],
-                      ),
-                    );
-                  },
-                ),
-            ],
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          if (step.extraNote != null && step.extraNote!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0, right: 42.0),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade800,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.psychology_alt,
-                        color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        step.extraNote!,
-                        style: const TextStyle(color: Colors.white),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(16.w),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 32.w,
+                  height: 32.w,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      step.stepNumber.toString(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
+                  ),
                 ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Text(
+                    step.description,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                if (step.rational != null && step.rational!.isNotEmpty)
+                  IconButton(
+                    icon: Icon(
+                      Icons.lightbulb_outline,
+                      color: Colors.amber.shade700,
+                      size: 24.sp,
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Row(
+                            children: [
+                              Icon(
+                                Icons.lightbulb,
+                                color: Colors.amber.shade700,
+                              ),
+                              SizedBox(width: 8.w),
+                              const Text('السبب العلمي'),
+                            ],
+                          ),
+                          content: Text(
+                            step.rational!,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              height: 1.5,
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('إغلاق'),
+                            ),
+                          ],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+          if (step.hint != null && step.hint!.isNotEmpty)
+            Container(
+              margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.w),
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                  color: Colors.amber.shade200,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.tips_and_updates,
+                    color: Colors.amber.shade700,
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      step.hint!,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.amber.shade900,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -386,21 +797,77 @@ class _IllustrationsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CustomExpansionTile(
-      title: 'صور توضيحية',
-      children: illustrations.map((illustration) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          // Assuming images are from assets.
-          // User needs to ensure the asset paths are correct.
-          child: Image.asset(
-            illustration.imagePath,
-            errorBuilder: (context, error, stackTrace) {
-              return Text('Could not load image: ${illustration.imagePath}');
-            },
-          ),
-        );
-      }).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.image,
+              color: Theme.of(context).primaryColor,
+              size: 24.sp,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'الصور التوضيحية',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        ...illustrations.map((illustration) {
+          return Container(
+            margin: EdgeInsets.only(bottom: 16.h),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.r),
+              child: Image.asset(
+                illustration.imagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200.h,
+                    color: Colors.grey.shade200,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.broken_image,
+                            size: 48.sp,
+                            color: Colors.grey.shade400,
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'تعذر تحميل الصورة',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        }).toList(),
+      ],
     );
   }
 }

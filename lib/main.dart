@@ -1,34 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/routing/app_router.dart';
-import 'core/theming/app_theme.dart';
+import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-
-    // Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-
-    // Initialize SharedPreferences
+    await SharedPreferences.getInstance();
     await AppRouter.init();
 
     runApp(const NursingPlusApp());
   } catch (e) {
     debugPrint('Error during initialization: $e');
-    // You might want to show an error screen here
-    runApp(const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('حدث خطأ أثناء تشغيل التطبيق'),
-        ),
-      ),
-    ));
+    rethrow;
   }
 }
 
@@ -46,6 +36,8 @@ class NursingPlusApp extends StatelessWidget {
           title: 'Nursing Plus',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.system,
           routerConfig: AppRouter.router,
           locale: const Locale('ar', 'EG'), // Set Arabic as default locale
           builder: (context, child) {
@@ -55,7 +47,7 @@ class NursingPlusApp extends StatelessWidget {
               child: MediaQuery(
                 // Ensure proper text scaling
                 data: MediaQuery.of(context)
-                    .copyWith(textScaler: TextScaler.linear(1.0)),
+                    .copyWith(textScaler: const TextScaler.linear(1.0)),
                 child: child!,
               ),
             );

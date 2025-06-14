@@ -104,8 +104,7 @@ class Implementation {
   final int stepNumber;
   final String description;
   final String? rational;
-  final String? extraNote;
-  final String? extraNoteIcon;
+  final String? hint;
 
   Implementation({
     required this.id,
@@ -113,8 +112,7 @@ class Implementation {
     required this.stepNumber,
     required this.description,
     this.rational,
-    this.extraNote,
-    this.extraNoteIcon,
+    this.hint,
   });
 
   factory Implementation.fromMap(Map<String, dynamic> map) {
@@ -124,8 +122,7 @@ class Implementation {
       stepNumber: map['step_number'],
       description: map['description'],
       rational: map['rational'],
-      extraNote: map['extra_note'],
-      extraNoteIcon: map['extra_note_icon'],
+      hint: map['hint'],
     );
   }
 }
@@ -167,10 +164,11 @@ class SqliteService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    // await deleteDatabase(path); // uncomment for testing to clear db on each start
+    await deleteDatabase(
+        path); // uncomment for testing to clear db on each start
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
     );
   }
@@ -182,8 +180,37 @@ class SqliteService {
         name TEXT NOT NULL,
         category TEXT,
         about TEXT,
-        stepCount INTEGER DEFAULT 0,
-        categoryIcon TEXT
+        indications TEXT,
+        contraindications TEXT,
+        complications TEXT,
+        required_tools TEXT,
+        important_info TEXT,
+        step_count INTEGER DEFAULT 0,
+        category_icon TEXT,
+        info_icon TEXT,
+        info_text TEXT,
+        has_illustrations INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE implementations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        procedure_id INTEGER NOT NULL,
+        step_number INTEGER NOT NULL,
+        description TEXT NOT NULL,
+        rational TEXT,
+        hint TEXT,
+        FOREIGN KEY (procedure_id) REFERENCES procedures (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE illustrations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        procedure_id INTEGER NOT NULL,
+        image_path TEXT NOT NULL,
+        FOREIGN KEY (procedure_id) REFERENCES procedures (id) ON DELETE CASCADE
       )
     ''');
 
@@ -195,87 +222,151 @@ class SqliteService {
       )
     ''');
 
-    // Add some dummy data
     await _addDummyData(db);
   }
 
   Future<void> _addDummyData(Database db) async {
-    final procedures = [
-      {
-        'name': 'قياس العلامات الحيوية',
-        'category': 'تمريض الأطفال',
-        'about': 'قياس درجة الحرارة والضغط والنبض',
-        'stepCount': 32,
-        'categoryIcon': 'child_care'
-      },
-      {
-        'name': 'تركيب كانيولا',
-        'category': 'الرعاية المركزة',
-        'about': 'خطوات تركيب الكانيولا الوريدية',
-        'stepCount': 24,
-        'categoryIcon': 'local_hospital'
-      },
-      // Add more dummy procedures as needed
+    final categories = [
+      'تمريض الأطفال',
+      'الرعاية المركزة',
+      'تمريض الطوارئ',
+      'تمريض صحة المجتمع',
+      'التمريض الجراحي',
+      'تمريض الباطنة'
+    ];
+    final icons = [
+      'child_care',
+      'local_hospital',
+      'emergency',
+      'groups',
+      'medical_services',
+      'healing'
     ];
 
-    for (var procedure in procedures) {
-      await db.insert('procedures', procedure);
+    for (int i = 0; i < categories.length; i++) {
+      for (int j = 1; j <= 3; j++) {
+        final procedureId = (i * 3) + j;
+        await db.insert('procedures', {
+          'id': procedureId,
+          'name': 'إجراء ${categories[i]} رقم $j',
+          'category': categories[i],
+          'about':
+              'هذا وصف تفصيلي عن إجراء ${categories[i]} رقم $j. يتضمن هذا الإجراء عدة خطوات مهمة لضمان سلامة المريض.',
+          'indications': 'يستخدم هذا الإجراء في حالات ...',
+          'contraindications': 'يمنع استخدام هذا الإجراء في حالات ...',
+          'complications': 'قد تحدث بعض المضاعفات مثل ...',
+          'required_tools': 'الأدوات المطلوبة: قفازات، شاش، محلول مطهر.',
+          'important_info':
+              'معلومات هامة: يجب التأكد من هوية المريض قبل البدء.',
+          'step_count': 5,
+          'category_icon': icons[i],
+          'info_icon': 'info',
+          'info_text': 'ملاحظة إضافية',
+          'has_illustrations': 1,
+        });
+
+        for (int k = 1; k <= 5; k++) {
+          await db.insert('implementations', {
+            'procedure_id': procedureId,
+            'step_number': k,
+            'description':
+                'وصف تفصيلي للخطوة رقم $k من إجراء ${categories[i]} رقم $j.',
+            'rational': 'السبب العلمي للخطوة رقم $k هو ...',
+            'hint': 'تلميح للخطوة رقم $k',
+          });
+        }
+
+        await db.insert('illustrations', {
+          'procedure_id': procedureId,
+          'image_path': 'assets/images/placeholder.png' // Placeholder image
+        });
+      }
     }
   }
 
   Future<Procedure> getProcedureById(int id) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'procedures',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final List<Map<String, dynamic>> maps =
+        await db.query('procedures', where: 'id = ?', whereArgs: [id]);
 
     if (maps.isNotEmpty) {
-      return Procedure.fromMap(maps.first);
+      final procedureMap = maps.first;
+      final implementations = await _getImplementationsForProcedure(id);
+      final illustrations = await _getIllustrationsForProcedure(id);
+      return Procedure.fromMap(procedureMap).copyWith(
+          implementations: implementations, illustrations: illustrations);
     } else {
       throw Exception('ID $id not found');
     }
+  }
+
+  Future<List<Implementation>> _getImplementationsForProcedure(
+      int procedureId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'implementations',
+      where: 'procedure_id = ?',
+      whereArgs: [procedureId],
+      orderBy: 'step_number ASC',
+    );
+    return List.generate(maps.length, (i) => Implementation.fromMap(maps[i]));
+  }
+
+  Future<List<Illustration>> _getIllustrationsForProcedure(
+      int procedureId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'illustrations',
+      where: 'procedure_id = ?',
+      whereArgs: [procedureId],
+    );
+    return List.generate(maps.length, (i) => Illustration.fromMap(maps[i]));
   }
 
   Future<List<Procedure>> getAllProcedures() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('procedures');
 
-    return List.generate(maps.length, (i) {
-      return Procedure.fromMap(maps[i]);
-    });
+    List<Procedure> procedures = [];
+    for (var map in maps) {
+      final implementations = await _getImplementationsForProcedure(map['id']);
+      final illustrations = await _getIllustrationsForProcedure(map['id']);
+      procedures.add(Procedure.fromMap(map).copyWith(
+          implementations: implementations, illustrations: illustrations));
+    }
+    return procedures;
   }
 
-  // Method to search procedures by name
   Future<List<Procedure>> searchProcedures(String query) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'procedures',
-      where: 'name LIKE ?',
-      whereArgs: ['%$query%'],
-    );
+    final List<Map<String, dynamic>> maps = await db
+        .query('procedures', where: 'name LIKE ?', whereArgs: ['%$query%']);
 
-    return List.generate(maps.length, (i) {
-      return Procedure.fromMap(maps[i]);
-    });
+    List<Procedure> procedures = [];
+    for (var map in maps) {
+      final implementations = await _getImplementationsForProcedure(map['id']);
+      final illustrations = await _getIllustrationsForProcedure(map['id']);
+      procedures.add(Procedure.fromMap(map).copyWith(
+          implementations: implementations, illustrations: illustrations));
+    }
+    return procedures;
   }
 
-  // Method to get procedures by category name
   Future<List<Procedure>> getProceduresByCategory(String categoryName) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'procedures',
-      where: 'category = ?',
-      whereArgs: [categoryName],
-    );
+    final List<Map<String, dynamic>> maps = await db
+        .query('procedures', where: 'category = ?', whereArgs: [categoryName]);
 
-    return List.generate(maps.length, (i) {
-      return Procedure.fromMap(maps[i]);
-    });
+    List<Procedure> procedures = [];
+    for (var map in maps) {
+      final implementations = await _getImplementationsForProcedure(map['id']);
+      final illustrations = await _getIllustrationsForProcedure(map['id']);
+      procedures.add(Procedure.fromMap(map).copyWith(
+          implementations: implementations, illustrations: illustrations));
+    }
+    return procedures;
   }
 
-  // New methods for saved procedures
   Future<List<Procedure>> getSavedProcedures() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
@@ -284,7 +375,14 @@ class SqliteService {
       ORDER BY sp.saved_at DESC
     ''');
 
-    return List.generate(maps.length, (i) => Procedure.fromMap(maps[i]));
+    List<Procedure> procedures = [];
+    for (var map in maps) {
+      final implementations = await _getImplementationsForProcedure(map['id']);
+      final illustrations = await _getIllustrationsForProcedure(map['id']);
+      procedures.add(Procedure.fromMap(map).copyWith(
+          implementations: implementations, illustrations: illustrations));
+    }
+    return procedures;
   }
 
   Future<bool> isProcedureSaved(int procedureId) async {
