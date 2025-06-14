@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/firebase_service.dart';
+import '../../features/6_saved_procedures/logic/cubit/saved_procedures_cubit.dart';
 
 // Import screens
 import '../../features/1_onboarding/ui/screens/onboarding_screen.dart';
@@ -23,6 +25,13 @@ class AppRouter {
       _prefs = await SharedPreferences.getInstance();
       _isInitialized = true;
     }
+  }
+
+  static Widget _wrapWithProvider(Widget child) {
+    return BlocProvider<SavedProceduresCubit>(
+      create: (context) => SavedProceduresCubit()..loadSavedProcedures(),
+      child: child,
+    );
   }
 
   static final router = GoRouter(
@@ -62,13 +71,14 @@ class AppRouter {
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => _wrapWithProvider(const HomeScreen()),
       ),
       GoRoute(
         path: '/procedures-list/:categoryName',
         builder: (context, state) {
           final categoryName = state.pathParameters['categoryName']!;
-          return ProceduresListScreen(categoryName: categoryName);
+          return _wrapWithProvider(
+              ProceduresListScreen(categoryName: categoryName));
         },
       ),
       GoRoute(
@@ -76,15 +86,16 @@ class AppRouter {
         builder: (context, state) {
           final procedureId = int.parse(state.pathParameters['procedureId']!);
           final gradient = state.extra as Gradient?;
-          return ProcedureDetailsScreen(
+          return _wrapWithProvider(ProcedureDetailsScreen(
             procedureId: procedureId,
             gradient: gradient,
-          );
+          ));
         },
       ),
       GoRoute(
         path: '/saved-procedures',
-        builder: (context, state) => const SavedProceduresScreen(),
+        builder: (context, state) =>
+            _wrapWithProvider(const SavedProceduresScreen()),
         redirect: (context, state) async {
           await init();
           if (!_firebaseService.isLoggedIn) {
@@ -95,7 +106,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        builder: (context, state) => _wrapWithProvider(const SettingsScreen()),
       ),
     ],
   );

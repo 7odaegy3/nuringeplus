@@ -4,8 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/database/sqflite_service.dart';
 import '../../logic/cubit/procedure_details_cubit.dart';
+import '../../../6_saved_procedures/logic/cubit/saved_procedures_cubit.dart';
+import '../../../6_saved_procedures/logic/cubit/saved_procedures_state.dart';
 
-class ProcedureDetailsScreen extends StatelessWidget {
+class ProcedureDetailsScreen extends StatefulWidget {
   final int procedureId;
   final Gradient? gradient;
 
@@ -16,128 +18,146 @@ class ProcedureDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<ProcedureDetailsScreen> createState() => _ProcedureDetailsScreenState();
+}
+
+class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen> {
+  final SqliteService _sqliteService = SqliteService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfSaved();
+  }
+
+  Future<void> _checkIfSaved() async {
+    final isSaved = await _sqliteService.isProcedureSaved(widget.procedureId);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    final procedure = await _sqliteService.getProcedureById(widget.procedureId);
+    if (procedure != null) {
+      context.read<SavedProceduresCubit>().toggleSaveProcedure(procedure);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ProcedureDetailsCubit()..loadProcedure(procedureId),
-      child: Scaffold(
-        body: BlocBuilder<ProcedureDetailsCubit, ProcedureDetailsState>(
-          builder: (context, state) {
-            if (state.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('تفاصيل الإجراء'),
+        actions: [
+          BlocBuilder<SavedProceduresCubit, SavedProceduresState>(
+            builder: (context, state) {
+              final isSaved =
+                  state.procedures.any((p) => p.id == widget.procedureId);
+              return IconButton(
+                icon: Icon(
+                  isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  color: isSaved ? Colors.blue : null,
+                ),
+                onPressed: _toggleSave,
+              );
+            },
+          ),
+        ],
+      ),
+      body: FutureBuilder<Procedure>(
+        future: _sqliteService.getProcedureById(widget.procedureId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (state.error != null) {
-              return Center(child: Text('Error: ${state.error}'));
-            }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-            final procedure = state.procedure;
-            if (procedure == null) {
-              return const Center(child: Text('Procedure not found.'));
-            }
+          if (!snapshot.hasData) {
+            return const Center(child: Text('Procedure not found'));
+          }
 
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: Stack(
-                children: [
-                  // Gradient Background
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: gradient ??
-                          const LinearGradient(
-                            // Default gradient
-                            colors: [
-                              Color(0xFF00796B), // Teal
-                              Color(0xFF2E7D32), // Green
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                    ),
-                  ),
-                  // Content
-                  SafeArea(
-                    child: Column(
-                      children: [
-                        _CustomAppBar(),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                _HeaderSection(procedure: procedure),
-                                _buildExpansionSections(procedure),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+          final procedure = snapshot.data!;
+          return CustomScrollView(
+            slivers: [
+              _buildHeader(procedure),
+              _buildContent(procedure),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader(Procedure procedure) {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: EdgeInsets.all(20.w),
+        decoration: BoxDecoration(
+          gradient: widget.gradient ??
+              const LinearGradient(
+                colors: [Colors.blue, Colors.lightBlue],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            );
-          },
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              procedure.name,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (procedure.category != null) ...[
+              SizedBox(height: 8.h),
+              Text(
+                procedure.category!,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 16.sp,
+                ),
+              ),
+            ],
+            if (procedure.about != null) ...[
+              SizedBox(height: 16.h),
+              Text(
+                procedure.about!,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.sp,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildExpansionSections(Procedure procedure) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          if (procedure.about?.isNotEmpty ?? false)
-            _CustomExpansionTile(
-              title: 'نبذة عن البروسيدجر',
-              children: [
-                Text(procedure.about!, style: const TextStyle(fontSize: 16))
-              ],
+  Widget _buildContent(Procedure procedure) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'عدد الخطوات: ${procedure.stepCount}',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          if (procedure.indications?.isNotEmpty ?? false)
-            _CustomExpansionTile(
-              title: 'Indications',
-              children: [
-                Text(procedure.indications!,
-                    style: const TextStyle(fontSize: 16))
-              ],
-            ),
-          if (procedure.contraindications?.isNotEmpty ?? false)
-            _CustomExpansionTile(
-              title: 'Contraindications',
-              children: [
-                Text(procedure.contraindications!,
-                    style: const TextStyle(fontSize: 16))
-              ],
-            ),
-          if (procedure.complications?.isNotEmpty ?? false)
-            _CustomExpansionTile(
-              title: 'Complications',
-              children: [
-                Text(procedure.complications!,
-                    style: const TextStyle(fontSize: 16))
-              ],
-            ),
-          if (procedure.requiredTools?.isNotEmpty ?? false)
-            _CustomExpansionTile(
-              title: 'الأدوات المطلوبة',
-              children: [
-                Text(procedure.requiredTools!,
-                    style: const TextStyle(fontSize: 16))
-              ],
-            ),
-          if (procedure.importantInfo?.isNotEmpty ?? false)
-            _CustomExpansionTile(
-              title: 'معلومات هامة',
-              children: [
-                Text(procedure.importantInfo!,
-                    style: const TextStyle(fontSize: 16))
-              ],
-            ),
-          if (procedure.implementations.isNotEmpty)
-            _ImplementationsSection(implementations: procedure.implementations),
-          if (procedure.illustrations.isNotEmpty)
-            _IllustrationsSection(illustrations: procedure.illustrations),
-        ],
+            // Add more content sections here
+          ],
+        ),
       ),
     );
   }
