@@ -1,48 +1,49 @@
 import 'package:equatable/equatable.dart';
 import '../../../../core/database/sqflite_service.dart';
+import '../../data/models/category_model.dart';
 
-class SavedProceduresState extends Equatable {
-  final List<Procedure> procedures;
+class HomeState extends Equatable {
+  final List<CategoryModel> categories;
+  final List<Procedure> savedProcedures;
   final List<Procedure> searchResults;
   final bool isLoading;
   final bool isSearching;
   final String? error;
-  final String? lastSearchQuery;
 
-  const SavedProceduresState({
-    this.procedures = const [],
+  const HomeState({
+    this.categories = const [],
+    this.savedProcedures = const [],
     this.searchResults = const [],
     this.isLoading = false,
     this.isSearching = false,
     this.error,
-    this.lastSearchQuery,
   });
 
-  SavedProceduresState copyWith({
-    List<Procedure>? procedures,
+  HomeState copyWith({
+    List<CategoryModel>? categories,
+    List<Procedure>? savedProcedures,
     List<Procedure>? searchResults,
     bool? isLoading,
     bool? isSearching,
     String? error,
-    String? lastSearchQuery,
   }) {
-    return SavedProceduresState(
-      procedures: procedures ?? this.procedures,
+    return HomeState(
+      categories: categories ?? this.categories,
+      savedProcedures: savedProcedures ?? this.savedProcedures,
       searchResults: searchResults ?? this.searchResults,
       isLoading: isLoading ?? this.isLoading,
       isSearching: isSearching ?? this.isSearching,
       error: error ?? this.error,
-      lastSearchQuery: lastSearchQuery ?? this.lastSearchQuery,
     );
   }
 
   @override
   List<Object?> get props => [
-        procedures,
+        categories,
+        savedProcedures,
         searchResults,
         isLoading,
         isSearching,
         error,
-        lastSearchQuery,
       ];
 }

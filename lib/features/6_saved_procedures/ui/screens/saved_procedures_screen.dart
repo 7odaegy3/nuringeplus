@@ -1,13 +1,17 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/database/sqflite_service.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/helpers/app_colors.dart';
+import '../../../../core/helpers/app_text_styles.dart';
 import '../../../../core/widgets/custom_search_bar.dart';
 import '../../logic/cubit/saved_procedures_cubit.dart';
 import '../../logic/cubit/saved_procedures_state.dart';
+import 'package:flutter/rendering.dart';
 
 class SavedProceduresScreen extends StatefulWidget {
   const SavedProceduresScreen({super.key});
@@ -17,7 +21,8 @@ class SavedProceduresScreen extends StatefulWidget {
 }
 
 class _SavedProceduresScreenState extends State<SavedProceduresScreen> {
-  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _userName = '';
 
   final List<Gradient> _gradients = const [
     LinearGradient(
@@ -92,21 +97,22 @@ class _SavedProceduresScreenState extends State<SavedProceduresScreen> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      if (mounted) {
-        context
-            .read<SavedProceduresCubit>()
-            .searchSavedProcedures(_searchController.text);
-      }
-    });
+    _loadUserName();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SavedProceduresCubit>().loadSavedProcedures();
     });
   }
 
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? '';
+    setState(() {
+      _userName = name;
+    });
+  }
+
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -138,8 +144,15 @@ class _SavedProceduresScreenState extends State<SavedProceduresScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? AppColors.darkBackground : AppColors.lightBackground;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: BlocConsumer<SavedProceduresCubit, SavedProceduresState>(
           listener: (context, state) {
@@ -151,294 +164,460 @@ class _SavedProceduresScreenState extends State<SavedProceduresScreen> {
           },
           builder: (context, state) {
             if (state.isLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 100.w,
+                      height: 100.w,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 8.w,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        backgroundColor: AppColors.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    Text(
+                      'جاري التحميل...',
+                      style: AppTextStyles.h3.copyWith(color: textColor),
+                    ),
+                  ],
+                ),
               );
             }
 
+            final filteredProcedures = _searchQuery.isEmpty
+                ? state.procedures
+                : state.procedures
+                    .where((p) => p.name
+                        .toLowerCase()
+                        .contains(_searchQuery.toLowerCase()))
+                    .toList();
+
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: 140.h,
-                    floating: true,
-                    pinned: true,
-                    elevation: 0,
-                    backgroundColor: Colors.white,
-                    leading: Container(
-                      margin: EdgeInsets.all(8.w),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.05),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon:
-                            const Icon(Icons.arrow_back, color: Colors.black87),
-                        onPressed: () => context.go('/home'),
-                      ),
-                    ),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        color: Colors.white,
-                        child: SafeArea(
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return SizedBox(
-                                height: constraints.maxHeight,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 24.w),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.all(8.w),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(12.r),
-                                            ),
-                                            child: Icon(
-                                              Icons.favorite_rounded,
-                                              color: AppColors.primary,
-                                              size: 24.sp,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12.w),
-                                          Text(
-                                            'المحفوظات',
-                                            style: TextStyle(
-                                              color: Colors.black87,
-                                              fontSize: 20.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(height: 12.h),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 24.w,
-                                        right: 24.w,
-                                        bottom: 8.h,
-                                      ),
-                                      child: CustomSearchBar(
-                                        hintText: 'ابحث في المحفوظات...',
-                                        onChanged: (query) {
-                                          context
-                                              .read<SavedProceduresCubit>()
-                                              .searchSavedProcedures(query);
-                                        },
-                                      ),
-                                    ),
+              child: Stack(
+                children: [
+                  Column(
+                    children: [
+                      // Header Section with Welcome Message
+                      Container(
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(32.r),
+                            bottomRight: Radius.circular(32.r),
+                          ),
+                          boxShadow: isDark
+                              ? AppColors.getDarkShadow(opacity: 0.2)
+                              : AppColors.getLightShadow(),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Spacer for back button
+                            Container(
+                              height: 64.h,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    surfaceColor,
+                                    surfaceColor.withOpacity(0.0),
                                   ],
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (state.procedures.isEmpty)
-                    SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.bookmark_border_rounded,
-                              size: 64.sp,
-                              color: Colors.grey,
+                              ),
                             ),
-                            SizedBox(height: 16.h),
-                            Text(
-                              'لا توجد إجراءات محفوظة',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                color: Colors.grey,
+                            // Welcome Message
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24.w),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ShaderMask(
+                                    shaderCallback: (bounds) => LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.primary.withBlue(255),
+                                      ],
+                                      begin: Alignment.topRight,
+                                      end: Alignment.bottomLeft,
+                                    ).createShader(bounds),
+                                    child: Text(
+                                      'أهلاً بك مرة أخرى،',
+                                      style: AppTextStyles.h2.copyWith(
+                                        color: Colors.white,
+                                        fontSize: 24.sp,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Text(
+                                    _userName,
+                                    style: AppTextStyles.h1.copyWith(
+                                      color: textColor,
+                                      fontSize: 32.sp,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Text(
+                                    'هنا تجد كل ما حفظته',
+                                    style: AppTextStyles.bodyLarge.copyWith(
+                                      color: textColor.withOpacity(0.7),
+                                      fontSize: 16.sp,
+                                    ),
+                                  ),
+                                  SizedBox(height: 16.h),
+                                ],
+                              ),
+                            ),
+                            // Search Bar
+                            Container(
+                              margin: EdgeInsets.all(16.w),
+                              child: CustomSearchBar(
+                                hintText: 'ابحث في المحفوظات...',
+                                onChanged: (query) {
+                                  setState(() {
+                                    _searchQuery = query;
+                                  });
+                                },
                               ),
                             ),
                           ],
                         ),
                       ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                          16.w, 16.h, 16.w, kBottomNavigationBarHeight + 16.h),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16.h,
-                          crossAxisSpacing: 16.w,
-                          childAspectRatio: 0.85,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final procedure = state.procedures[index];
-                            return Dismissible(
-                              key: ValueKey(
-                                  'saved_procedure_${procedure.id}_${DateTime.now().millisecondsSinceEpoch}'),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
+                      // Procedures Grid
+                      Expanded(
+                        child: filteredProcedures.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.search_off_rounded,
+                                      size: 64.sp,
+                                      color: textColor.withOpacity(0.5),
+                                    ),
+                                    SizedBox(height: 16.h),
+                                    Text(
+                                      'لا توجد إجراءات محفوظة',
+                                      style: AppTextStyles.h3.copyWith(
+                                        color: textColor.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : GridView.builder(
+                                padding: EdgeInsets.all(16.w),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 16.w,
+                                  mainAxisSpacing: 16.h,
+                                  childAspectRatio: 1,
+                                ),
+                                itemCount: filteredProcedures.length,
+                                itemBuilder: (context, index) {
+                                  final procedure = filteredProcedures[index];
+                                  return _buildProcedureCard(
+                                    context,
+                                    procedure,
+                                    _gradients[index % _gradients.length],
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                  // Back Button with Blur Background
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    left: 0,
+                    child: ClipRRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          height: 64.h,
+                          color: surfaceColor.withOpacity(0.8),
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          child: Row(
+                            children: [
+                              Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.red.shade400,
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  Icons.delete_rounded,
-                                  color: Colors.white,
-                                  size: 32.sp,
-                                ),
-                              ),
-                              onDismissed: (_) =>
-                                  _removeProcedure(context, procedure),
-                              child: GestureDetector(
-                                onTap: () => AppRouter.goToProcedureDetails(
-                                  context,
-                                  procedure.id,
-                                  extra: _gradients[index % _gradients.length],
-                                ),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient:
-                                        _gradients[index % _gradients.length],
-                                    borderRadius: BorderRadius.circular(20.r),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      isDark
+                                          ? Colors.white.withOpacity(0.15)
+                                          : Colors.white.withOpacity(0.9),
+                                      isDark
+                                          ? Colors.white.withOpacity(0.05)
+                                          : Colors.white.withOpacity(0.7),
                                     ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                  child: Stack(
-                                    children: [
-                                      Positioned(
-                                        right: -30.w,
-                                        top: -30.h,
-                                        child: Icon(
-                                          _getCategoryIcon(procedure.category),
-                                          color: Colors.white.withOpacity(0.2),
-                                          size: 120.sp,
-                                        ),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? Colors.white.withOpacity(0.1)
+                                        : Colors.black.withOpacity(0.05),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isDark
+                                          ? Colors.black.withOpacity(0.2)
+                                          : Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () => context.go('/home'),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16.w,
+                                        vertical: 8.h,
                                       ),
-                                      Padding(
-                                        padding: EdgeInsets.all(16.w),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.all(8.w),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white
-                                                    .withOpacity(0.2),
-                                                borderRadius:
-                                                    BorderRadius.circular(12.r),
-                                              ),
-                                              child: Icon(
-                                                _getCategoryIcon(
-                                                    procedure.category),
-                                                color: Colors.white,
-                                                size: 24.sp,
-                                              ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.arrow_back_ios_rounded,
+                                            color: textColor,
+                                            size: 18.sp,
+                                          ),
+                                          SizedBox(width: 4.w),
+                                          Text(
+                                            'الرئيسية',
+                                            style: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                              color: textColor,
+                                              fontWeight: FontWeight.w600,
                                             ),
-                                            SizedBox(height: 16.h),
-                                            Text(
-                                              procedure.name,
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16.sp,
-                                                height: 1.2,
-                                              ),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const Spacer(),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.format_list_numbered,
-                                                  color: Colors.white
-                                                      .withOpacity(0.8),
-                                                  size: 16.sp,
-                                                ),
-                                                SizedBox(width: 4.w),
-                                                Text(
-                                                  '${procedure.stepCount} خطوة',
-                                                  style: TextStyle(
-                                                    color: Colors.white
-                                                        .withOpacity(0.8),
-                                                    fontSize: 12.sp,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                          childCount: state.procedures.length,
+                            ],
+                          ),
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             );
           },
         ),
       ),
-      bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
-        child: BottomNavigationBar(
-          currentIndex: 1,
-          elevation: 8,
-          backgroundColor: Colors.white,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: Colors.grey,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                context.go('/home');
-                break;
-              case 2:
-                AppRouter.goToSettings(context);
-                break;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'الرئيسية',
+    );
+  }
+
+  Widget _buildProcedureCard(
+      BuildContext context, Procedure procedure, Gradient gradient) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(24.r),
+        boxShadow: [
+          // Main shadow
+          BoxShadow(
+            color: gradient.colors.first.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+          // Highlight shadow
+          BoxShadow(
+            color: Colors.white.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => AppRouter.goToProcedureDetails(context, procedure.id),
+          borderRadius: BorderRadius.circular(24.r),
+          child: Container(
+            padding: EdgeInsets.all(16.w),
+            child: Stack(
+              children: [
+                // Background Icon
+                Positioned(
+                  right: -30.w,
+                  top: -30.h,
+                  child: Icon(
+                    _getCategoryIcon(procedure.category),
+                    color: Colors.white.withOpacity(0.15),
+                    size: 120.sp,
+                  ),
+                ),
+                // Content
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Row with Category Icon and Remove Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Category Icon with Container
+                        Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            _getCategoryIcon(procedure.category),
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
+                        ),
+                        // Remove Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1,
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _removeProcedure(context, procedure),
+                              borderRadius: BorderRadius.circular(12.r),
+                              child: Padding(
+                                padding: EdgeInsets.all(8.w),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.white,
+                                  size: 20.sp,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Title with Gradient Background
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 8.h,
+                      ),
+                      child: Text(
+                        procedure.name,
+                        style: AppTextStyles.h3.copyWith(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          height: 1.2,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.3),
+                              offset: const Offset(0, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    // Steps Count with Glass Effect
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.format_list_numbered_rounded,
+                            color: Colors.white,
+                            size: 16.sp,
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            '${procedure.stepCount} خطوة',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                // Shine Effect
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 80.h,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.2),
+                          Colors.white.withOpacity(0.0),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24.r),
+                        topRight: Radius.circular(24.r),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bookmark_rounded),
-              label: 'المحفوظات',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_rounded),
-              label: 'الإعدادات',
-            ),
-          ],
+          ),
         ),
       ),
     );

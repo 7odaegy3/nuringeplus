@@ -1,8 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/api/firebase_service.dart';
 import '../../../../core/database/sqflite_service.dart';
+import '../../../../core/services/search_service.dart';
 import '../../data/models/category_model.dart';
+import 'home_state.dart';
 
 // Home States
 class HomeState extends Equatable {
@@ -13,6 +16,7 @@ class HomeState extends Equatable {
   final String? userName;
   final bool isLoading;
   final String? error;
+  final bool isSearching;
 
   const HomeState({
     this.categories = const [],
@@ -22,6 +26,7 @@ class HomeState extends Equatable {
     this.userName,
     this.isLoading = false,
     this.error,
+    this.isSearching = false,
   });
 
   HomeState copyWith({
@@ -32,6 +37,7 @@ class HomeState extends Equatable {
     String? userName,
     bool? isLoading,
     String? error,
+    bool? isSearching,
   }) {
     return HomeState(
       categories: categories ?? this.categories,
@@ -41,6 +47,7 @@ class HomeState extends Equatable {
       userName: userName ?? this.userName,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      isSearching: isSearching ?? this.isSearching,
     );
   }
 
@@ -53,62 +60,66 @@ class HomeState extends Equatable {
         userName,
         isLoading,
         error,
+        isSearching,
       ];
 }
 
 // Home Cubit
 class HomeCubit extends Cubit<HomeState> {
   final _firebaseService = FirebaseService();
-  final _sqliteService = SqliteService();
+  final SqliteService _sqliteService = SqliteService();
+  late final SearchService _searchService;
 
-  HomeCubit() : super(const HomeState());
+  HomeCubit() : super(const HomeState()) {
+    _searchService = SearchService(_sqliteService);
+  }
 
   Future<void> loadHomePageData() async {
     try {
       emit(state.copyWith(isLoading: true));
 
-      // Get user info
-      final user = _firebaseService.currentUser;
-      final isGuest = user == null;
-      final userName = user?.displayName;
+      // Load user data from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final userName = prefs.getString('user_name');
+      final isGuest = prefs.getBool('is_guest') ?? false;
 
-      // Get categories from SQLite
+      // Get categories and count procedures in each category
       final procedures = await _sqliteService.getAllProcedures();
       final categoriesMap = <String, CategoryModel>{};
+
+      // Group procedures by category and count them
       for (var p in procedures) {
         if (p.category != null) {
-          // Assuming a procedure's category name can be used as a unique key for the category.
-          // You might need a more robust way to handle category IDs if they are not just names.
-          categoriesMap[p.category!] = CategoryModel(
-              id: p.id, nameAr: p.category!, iconName: p.categoryIcon);
-        }
-      }
-      final categories = categoriesMap.values.toList();
-
-      // Get saved procedures if user is logged in
-      List<Procedure> savedProcedures = [];
-      if (!isGuest) {
-        final savedIds =
-            await _firebaseService.getSavedProcedureIds(user.uid).first;
-
-        for (var id in savedIds) {
-          final proc = await _sqliteService.getProcedureById(id);
-          if (proc != null) {
-            savedProcedures.add(proc);
+          final category = categoriesMap[p.category!];
+          if (category == null) {
+            categoriesMap[p.category!] = CategoryModel(
+              nameAr: p.category!,
+              iconName: p.categoryIcon,
+              proceduresCount: 1,
+            );
+          } else {
+            categoriesMap[p.category!] = CategoryModel(
+              nameAr: category.nameAr,
+              iconName: category.iconName,
+              proceduresCount: category.proceduresCount + 1,
+            );
           }
         }
       }
 
+      // Get saved procedures
+      final savedProcedures = await _sqliteService.getSavedProcedures();
+
       emit(state.copyWith(
-        categories: categories,
-        savedProcedures: savedProcedures,
-        isGuest: isGuest,
-        userName: userName,
+        categories: categoriesMap.values.toList(),
+        savedProcedures: savedProcedures.take(3).toList(),
         isLoading: false,
+        userName: userName,
+        isGuest: isGuest,
       ));
     } catch (e) {
       emit(state.copyWith(
-        error: 'حدث خطأ: ${e.toString()}',
+        error: e.toString(),
         isLoading: false,
       ));
     }
@@ -121,11 +132,16 @@ class HomeCubit extends Cubit<HomeState> {
     }
 
     try {
-      final results = await _sqliteService.searchProcedures(query);
-      emit(state.copyWith(searchResults: results));
+      emit(state.copyWith(isSearching: true));
+      final results = await _searchService.searchProcedures(query);
+      emit(state.copyWith(
+        searchResults: results,
+        isSearching: false,
+      ));
     } catch (e) {
       emit(state.copyWith(
-        error: 'حدث خطأ في البحث: ${e.toString()}',
+        error: e.toString(),
+        isSearching: false,
       ));
     }
   }

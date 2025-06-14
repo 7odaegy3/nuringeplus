@@ -20,6 +20,9 @@ class Procedure {
   final bool hasIllustrations;
   final List<Implementation> implementations;
   final List<Illustration> illustrations;
+  final String? description;
+  final List<String>? steps;
+  final List<String>? hints;
 
   Procedure({
     required this.id,
@@ -38,6 +41,9 @@ class Procedure {
     required this.hasIllustrations,
     this.implementations = const [],
     this.illustrations = const [],
+    this.description,
+    this.steps,
+    this.hints,
   });
 
   Procedure copyWith({
@@ -57,6 +63,9 @@ class Procedure {
     bool? hasIllustrations,
     List<Implementation>? implementations,
     List<Illustration>? illustrations,
+    String? description,
+    List<String>? steps,
+    List<String>? hints,
   }) {
     return Procedure(
       id: id ?? this.id,
@@ -75,26 +84,54 @@ class Procedure {
       hasIllustrations: hasIllustrations ?? this.hasIllustrations,
       implementations: implementations ?? this.implementations,
       illustrations: illustrations ?? this.illustrations,
+      description: description ?? this.description,
+      steps: steps ?? this.steps,
+      hints: hints ?? this.hints,
     );
   }
 
   factory Procedure.fromMap(Map<String, dynamic> map) {
     return Procedure(
-      id: map['id'],
-      name: map['name'],
-      category: map['category'],
-      categoryIcon: map['category_icon'],
-      infoIcon: map['info_icon'],
-      infoText: map['info_text'],
-      about: map['about'],
-      indications: map['indications'],
-      contraindications: map['contraindications'],
-      complications: map['complications'],
-      requiredTools: map['required_tools'],
-      importantInfo: map['important_info'],
-      stepCount: map['step_count'] ?? 0,
+      id: map['id'] as int,
+      name: map['name'] as String,
+      category: map['category'] as String?,
+      categoryIcon: map['category_icon'] as String?,
+      infoIcon: map['info_icon'] as String?,
+      infoText: map['info_text'] as String?,
+      about: map['about'] as String?,
+      indications: map['indications'] as String?,
+      contraindications: map['contraindications'] as String?,
+      complications: map['complications'] as String?,
+      requiredTools: map['required_tools'] as String?,
+      importantInfo: map['important_info'] as String?,
+      stepCount: map['step_count'] as int,
       hasIllustrations: (map['has_illustrations'] ?? 0) == 1,
+      description: map['description'] as String?,
+      steps: map['steps'] != null ? List<String>.from(map['steps']) : null,
+      hints: map['hints'] != null ? List<String>.from(map['hints']) : null,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category,
+      'category_icon': categoryIcon,
+      'info_icon': infoIcon,
+      'info_text': infoText,
+      'about': about,
+      'indications': indications,
+      'contraindications': contraindications,
+      'complications': complications,
+      'required_tools': requiredTools,
+      'important_info': importantInfo,
+      'step_count': stepCount,
+      'has_illustrations': hasIllustrations ? 1 : 0,
+      'description': description,
+      'steps': steps,
+      'hints': hints,
+    };
   }
 }
 

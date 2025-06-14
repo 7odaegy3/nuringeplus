@@ -16,20 +16,23 @@ class ProcedureListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final secondaryTextColor =
+        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: isDark
+              ? AppColors.getDarkShadow(opacity: 0.2)
+              : AppColors.getLightShadow(),
         ),
         child: Row(
           children: [
@@ -38,7 +41,7 @@ class ProcedureListItem extends StatelessWidget {
               width: 48.w,
               height: 48.w,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(isDark ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
@@ -58,6 +61,7 @@ class ProcedureListItem extends StatelessWidget {
                     procedure.name,
                     style: AppTextStyles.bodyLarge.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: textColor,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -66,7 +70,9 @@ class ProcedureListItem extends StatelessWidget {
                   if (procedure.about != null)
                     Text(
                       procedure.about!,
-                      style: AppTextStyles.bodySmall,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: secondaryTextColor,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -77,7 +83,7 @@ class ProcedureListItem extends StatelessWidget {
             // Arrow
             Icon(
               Icons.chevron_right,
-              color: AppColors.textSecondary,
+              color: secondaryTextColor,
               size: 24.sp,
             ),
           ],

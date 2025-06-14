@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/firebase_service.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
 import '../../features/6_saved_procedures/logic/cubit/saved_procedures_cubit.dart';
 import '../../features/5_procedure_details/logic/cubit/procedure_details_cubit.dart';
 
@@ -20,6 +21,10 @@ class AppRouter {
   static final _firebaseService = FirebaseService();
   static late final SharedPreferences _prefs;
   static bool _isInitialized = false;
+  static final GlobalKey<NavigatorState> rootNavigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> shellNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   static Future<void> init() async {
     if (!_isInitialized) {
@@ -51,7 +56,45 @@ class AppRouter {
     );
   }
 
+  static Future<bool> _onWillPop(BuildContext context) async {
+    final router = GoRouter.of(context);
+    final location = GoRouterState.of(context).uri.path;
+
+    // This logic is only for the shell routes (/home, /saved-procedures, /settings)
+    // as the WillPopScope is only in the ShellRoute builder.
+
+    if (location == '/home') {
+      // If we are on the home screen, show an exit confirmation dialog.
+      final shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('الخروج من التطبيق'),
+          content: const Text('هل تريد الخروج من التطبيق؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('لا'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('نعم'),
+            ),
+          ],
+        ),
+      );
+      // Return true to exit, false to stay.
+      return shouldExit ?? false;
+    } else {
+      // If we are on another shell screen (e.g., /saved-procedures or /settings),
+      // navigate to the home screen on back press.
+      router.go('/home');
+      // Return false because we handled the navigation and don't want to exit.
+      return false;
+    }
+  }
+
   static final router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     debugLogDiagnostics: true,
     routes: [
@@ -86,11 +129,53 @@ class AppRouter {
         path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => _wrapWithProvider(const HomeScreen()),
+      ShellRoute(
+        navigatorKey: shellNavigatorKey,
+        builder: (context, state, child) {
+          final location = GoRouterState.of(context).uri.path;
+          int currentIndex = 0;
+
+          if (location.startsWith('/saved-procedures')) {
+            currentIndex = 1;
+          } else if (location.startsWith('/settings')) {
+            currentIndex = 2;
+          }
+
+          return WillPopScope(
+            onWillPop: () => _onWillPop(context),
+            child: Scaffold(
+              body: child,
+              bottomNavigationBar:
+                  CustomBottomNavBar(currentIndex: currentIndex),
+            ),
+          );
+        },
+        routes: [
+          GoRoute(
+            path: '/home',
+            builder: (context, state) => _wrapWithProvider(const HomeScreen()),
+          ),
+          GoRoute(
+            path: '/saved-procedures',
+            builder: (context, state) =>
+                _wrapWithProvider(const SavedProceduresScreen()),
+            redirect: (context, state) async {
+              await init();
+              if (!_firebaseService.isLoggedIn) {
+                return '/login';
+              }
+              return null;
+            },
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) =>
+                _wrapWithProvider(const SettingsScreen()),
+          ),
+        ],
       ),
       GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
         path: '/procedures-list/:categoryName',
         builder: (context, state) {
           final categoryName = state.pathParameters['categoryName']!;
@@ -99,6 +184,7 @@ class AppRouter {
         },
       ),
       GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
         path: '/procedure-details/:procedureId',
         builder: (context, state) {
           final procedureId = int.parse(state.pathParameters['procedureId']!);
@@ -111,22 +197,6 @@ class AppRouter {
             procedureId,
           );
         },
-      ),
-      GoRoute(
-        path: '/saved-procedures',
-        builder: (context, state) =>
-            _wrapWithProvider(const SavedProceduresScreen()),
-        redirect: (context, state) async {
-          await init();
-          if (!_firebaseService.isLoggedIn) {
-            return '/login';
-          }
-          return null;
-        },
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => _wrapWithProvider(const SettingsScreen()),
       ),
     ],
   );

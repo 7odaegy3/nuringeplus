@@ -2,62 +2,89 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary Colors
-  static const Color primary = Color(0xFF2196F3);
-  static const Color primaryDark = Color(0xFF1976D2);
-  static const Color primaryLight = Color(0xFF64B5F6);
+  static const primary = Color(0xFF6A11CB);
+  static const primaryLight = Color(0xFF8833FF);
+  static const primaryDark = Color(0xFF4A0C8F);
 
-  // Category Card Gradients
-  static const List<Color> greenGradient = [
-    Color(0xFF4CAF50),
-    Color(0xFF81C784),
-  ];
+  // Secondary Colors
+  static const secondary = Color(0xFF2575FC);
+  static const secondaryLight = Color(0xFF4A8FFF);
+  static const secondaryDark = Color(0xFF1A52B2);
 
-  static const List<Color> blueGradient = [
-    Color(0xFF2196F3),
-    Color(0xFF64B5F6),
-  ];
+  // Accent Colors
+  static const accent1 = Color(0xFF00B4DB);
+  static const accent2 = Color(0xFFFF416C);
+  static const accent3 = Color(0xFFFFB300);
 
-  static const List<Color> purpleGradient = [
-    Color(0xFF9C27B0),
-    Color(0xFFBA68C8),
-  ];
+  // Light Theme Colors
+  static const lightBackground = Color(0xFFF8F9FA);
+  static const lightSurface = Colors.white;
+  static const lightCard = Colors.white;
+  static const lightDivider = Color(0xFFE9ECEF);
+  static const lightText = Color(0xFF212529);
+  static const lightTextSecondary = Color(0xFF6C757D);
+  static const lightTextDisabled = Color(0xFFADB5BD);
 
-  static const List<Color> redGradient = [
-    Color(0xFFF44336),
-    Color(0xFFE57373),
-  ];
-
-  // Text Colors
-  static const Color textPrimary = Color(0xFF212121);
-  static const Color textSecondary = Color(0xFF757575);
-  static const Color textLight = Color(0xFFBDBDBD);
-
-  // Background Colors
-  static const Color background = Color(0xFFFAFAFA);
-  static const Color surface = Colors.white;
-  static const Color divider = Color(0xFFEEEEEE);
+  // Dark Theme Colors
+  static const darkBackground = Color(0xFF121212);
+  static const darkSurface = Color(0xFF1E1E1E);
+  static const darkCard = Color(0xFF2C2C2C);
+  static const darkDivider = Color(0xFF323232);
+  static const darkText = Color(0xFFF8F9FA);
+  static const darkTextSecondary = Color(0xFFADB5BD);
+  static const darkTextDisabled = Color(0xFF6C757D);
 
   // Status Colors
-  static const Color success = Color(0xFF4CAF50);
-  static const Color error = Color(0xFFF44336);
-  static const Color warning = Color(0xFFFFC107);
-  static const Color info = Color(0xFF2196F3);
+  static const success = Color(0xFF28A745);
+  static const warning = Color(0xFFFFC107);
+  static const error = Color(0xFFDC3545);
+  static const info = Color(0xFF17A2B8);
 
-  static const Color secondary = Color(0xFF03A9F4);
-  static const Color accent = Color(0xFF00BCD4);
-  static const Color grey = Color(0xFF9E9E9E);
-  static const Color darkGrey = Color(0xFF616161);
-  static const Color lightGrey = Color(0xFFE0E0E0);
-
-  static const LinearGradient primaryGradient = LinearGradient(
+  // Gradients
+  static const primaryGradient = LinearGradient(
     colors: [primary, secondary],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient accentGradient = LinearGradient(
-    colors: [secondary, accent],
+  static const accentGradient1 = LinearGradient(
+    colors: [accent1, Color(0xFF0083B0)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static const accentGradient2 = LinearGradient(
+    colors: [accent2, Color(0xFFFF4B2B)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Shadows
+  static List<BoxShadow> getLightShadow({
+    double opacity = 0.1,
+    double blurRadius = 10,
+    Offset offset = const Offset(0, 4),
+  }) {
+    return [
+      BoxShadow(
+        color: Colors.black.withOpacity(opacity),
+        blurRadius: blurRadius,
+        offset: offset,
+      ),
+    ];
+  }
+
+  static List<BoxShadow> getDarkShadow({
+    double opacity = 0.3,
+    double blurRadius = 10,
+    Offset offset = const Offset(0, 4),
+  }) {
+    return [
+      BoxShadow(
+        color: Colors.black.withOpacity(opacity),
+        blurRadius: blurRadius,
+        offset: offset,
+      ),
+    ];
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:ui';
 import '../../../../core/database/sqflite_service.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/helpers/app_colors.dart';
@@ -87,15 +88,38 @@ class ProceduresListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BlocProvider(
       create: (context) => ProceduresListCubit()..loadProcedures(categoryName),
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
+        backgroundColor: isDark ? Colors.black : Colors.grey[50],
         body: BlocBuilder<ProceduresListCubit, ProceduresListState>(
           builder: (context, state) {
             if (state.isLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 50.w,
+                      height: 50.w,
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        strokeWidth: 3,
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'جاري التحميل...',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
               );
             }
 
@@ -104,10 +128,17 @@ class ProceduresListScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48.sp,
-                      color: Colors.red,
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.error_outline,
+                        size: 48.sp,
+                        color: Colors.red,
+                      ),
                     ),
                     SizedBox(height: 16.h),
                     Text(
@@ -115,6 +146,26 @@ class ProceduresListScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16.sp,
                         color: Colors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24.h),
+                    ElevatedButton.icon(
+                      onPressed: () => context
+                          .read<ProceduresListCubit>()
+                          .loadProcedures(categoryName),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('إعادة المحاولة'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24.w,
+                          vertical: 12.h,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
                       ),
                     ),
                   ],
@@ -134,22 +185,31 @@ class ProceduresListScreen extends StatelessWidget {
                     floating: true,
                     pinned: true,
                     elevation: 0,
-                    backgroundColor: Colors.white,
+                    backgroundColor: isDark ? Colors.black : Colors.white,
                     leading: Container(
                       margin: EdgeInsets.all(8.w),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.05),
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.black.withOpacity(0.05),
                         shape: BoxShape.circle,
                       ),
-                      child: IconButton(
-                        icon:
-                            const Icon(Icons.arrow_back, color: Colors.black87),
-                        onPressed: () => context.pop(),
+                      child: ClipOval(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                            onPressed: () => context.pop(),
+                          ),
+                        ),
                       ),
                     ),
                     flexibleSpace: FlexibleSpaceBar(
                       background: Container(
-                        color: Colors.white,
+                        color: isDark ? Colors.black : Colors.white,
                         child: SafeArea(
                           child: LayoutBuilder(
                             builder: (context, constraints) {
@@ -165,36 +225,71 @@ class ProceduresListScreen extends StatelessWidget {
                                       child: Row(
                                         children: [
                                           Container(
-                                            padding: EdgeInsets.all(8.w),
+                                            padding: EdgeInsets.all(12.w),
                                             decoration: BoxDecoration(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.1),
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  AppColors.primary
+                                                      .withOpacity(0.2),
+                                                  AppColors.primary
+                                                      .withOpacity(0.1),
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              ),
                                               borderRadius:
-                                                  BorderRadius.circular(12.r),
+                                                  BorderRadius.circular(16.r),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: AppColors.primary
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
                                             ),
                                             child: Icon(
                                               _getCategoryIcon(categoryName),
                                               color: AppColors.primary,
-                                              size: 24.sp,
+                                              size: 28.sp,
                                             ),
                                           ),
-                                          SizedBox(width: 12.w),
+                                          SizedBox(width: 16.w),
                                           Expanded(
-                                            child: Text(
-                                              categoryName,
-                                              style: TextStyle(
-                                                color: Colors.black87,
-                                                fontSize: 20.sp,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  categoryName,
+                                                  style: TextStyle(
+                                                    color: isDark
+                                                        ? Colors.white
+                                                        : Colors.black87,
+                                                    fontSize: 24.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                SizedBox(height: 4.h),
+                                                Text(
+                                                  '${procedures.length} إجراء',
+                                                  style: TextStyle(
+                                                    color: isDark
+                                                        ? Colors.white60
+                                                        : Colors.black54,
+                                                    fontSize: 14.sp,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    SizedBox(height: 12.h),
+                                    SizedBox(height: 16.h),
                                     Padding(
                                       padding: EdgeInsets.only(
                                         left: 24.w,
@@ -269,84 +364,145 @@ class _ProcedureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: gradient,
+    return Hero(
+      tag: 'procedure_${procedure.id}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(20.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: gradient.colors.first.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -30.w,
-              top: -30.h,
-              child: Icon(
-                Icons.medical_services_outlined,
-                color: Colors.white.withOpacity(0.2),
-                size: 120.sp,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20.r),
+              child: Stack(
                 children: [
-                  Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
+                  // Background pattern
+                  Positioned(
+                    right: -30.w,
+                    top: -30.h,
                     child: Icon(
-                      procedure.hasIllustrations
-                          ? Icons.image_rounded
-                          : Icons.medical_services_rounded,
-                      color: Colors.white,
-                      size: 24.sp,
+                      Icons.medical_services_outlined,
+                      color: Colors.white.withOpacity(0.15),
+                      size: 120.sp,
                     ),
                   ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    procedure.name,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.sp,
-                      height: 1.2,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.format_list_numbered,
-                        color: Colors.white.withOpacity(0.8),
-                        size: 16.sp,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        '${procedure.stepCount} خطوة',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 12.sp,
+                  // Shine effect
+                  Positioned(
+                    left: -100.w,
+                    top: -100.h,
+                    child: Container(
+                      width: 200.w,
+                      height: 200.h,
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.2),
+                            Colors.white.withOpacity(0),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  // Content
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            procedure.hasIllustrations
+                                ? Icons.image_rounded
+                                : Icons.medical_services_rounded,
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          procedure.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
+                            height: 1.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black26,
+                                offset: const Offset(0, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 6.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: Colors.white24,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.format_list_numbered,
+                                color: Colors.white.withOpacity(0.9),
+                                size: 16.sp,
+                              ),
+                              SizedBox(width: 6.w),
+                              Text(
+                                '${procedure.stepCount} خطوة',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

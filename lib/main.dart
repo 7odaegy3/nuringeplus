@@ -1,57 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'core/routing/app_router.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/theme_data.dart';
+import 'features/7_settings/logic/cubit/settings_cubit.dart';
+import 'features/7_settings/logic/cubit/settings_state.dart';
 import 'firebase_options.dart';
 
-Future<void> main() async {
+void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await SharedPreferences.getInstance();
     await AppRouter.init();
 
-    runApp(const NursingPlusApp());
+    runApp(const MyApp());
   } catch (e) {
     debugPrint('Error during initialization: $e');
-    rethrow;
   }
 }
 
-class NursingPlusApp extends StatelessWidget {
-  const NursingPlusApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // iPhone X dimensions as base
+      designSize: const Size(428, 926),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MaterialApp.router(
-          title: 'Nursing Plus',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.system,
-          routerConfig: AppRouter.router,
-          locale: const Locale('ar', 'EG'), // Set Arabic as default locale
-          builder: (context, child) {
-            // Ensure RTL for Arabic
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: MediaQuery(
-                // Ensure proper text scaling
-                data: MediaQuery.of(context)
-                    .copyWith(textScaler: const TextScaler.linear(1.0)),
-                child: child!,
-              ),
-            );
-          },
+        return BlocProvider(
+          create: (context) => SettingsCubit(),
+          child: BlocBuilder<SettingsCubit, SettingsState>(
+            builder: (context, state) {
+              return MaterialApp.router(
+                debugShowCheckedModeBanner: false,
+                title: 'NursingPlus',
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: state.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+                routerConfig: AppRouter.router,
+                builder: (context, child) {
+                  return Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: child!,
+                  );
+                },
+              );
+            },
+          ),
         );
       },
     );

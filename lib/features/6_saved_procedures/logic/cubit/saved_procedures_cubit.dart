@@ -2,14 +2,17 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/database/sqflite_service.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../../../core/services/search_service.dart';
 import 'saved_procedures_state.dart';
 
 class SavedProceduresCubit extends Cubit<SavedProceduresState> {
   final SqliteService _sqliteService = SqliteService();
   final FirebaseService _firebaseService = FirebaseService();
+  late final SearchService _searchService;
   StreamSubscription? _savedProceduresSubscription;
 
   SavedProceduresCubit() : super(const SavedProceduresState()) {
+    _searchService = SearchService(_sqliteService);
     // Listen to changes in Firebase
     _savedProceduresSubscription =
         _firebaseService.savedProceduresStream().listen((procedureIds) {
@@ -83,21 +86,32 @@ class SavedProceduresCubit extends Cubit<SavedProceduresState> {
     }
   }
 
-  void searchSavedProcedures(String query) {
+  Future<void> searchSavedProcedures(String query) async {
     if (query.isEmpty) {
-      emit(state.copyWith(searchResults: []));
+      emit(state.copyWith(
+        searchResults: [],
+        lastSearchQuery: null,
+      ));
       return;
     }
 
-    final results = state.procedures.where((procedure) {
-      final name = procedure.name.toLowerCase();
-      final category = procedure.category?.toLowerCase() ?? '';
-      final searchQuery = query.toLowerCase();
-
-      return name.contains(searchQuery) || category.contains(searchQuery);
-    }).toList();
-
-    emit(state.copyWith(searchResults: results));
+    try {
+      emit(state.copyWith(isSearching: true));
+      final results = await _searchService.searchProcedures(
+        query,
+        savedProceduresOnly: state.procedures,
+      );
+      emit(state.copyWith(
+        searchResults: results,
+        lastSearchQuery: query,
+        isSearching: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        error: e.toString(),
+        isSearching: false,
+      ));
+    }
   }
 
   Future<void> toggleSaveProcedure(Procedure procedure) async {
@@ -124,16 +138,12 @@ class SavedProceduresCubit extends Cubit<SavedProceduresState> {
         final procedures = await _sqliteService.getSavedProcedures();
 
         // Update search results if there's an active search
-        final searchQuery =
-            state.searchResults.isNotEmpty ? procedure.name : '';
-        List<Procedure> searchResults = [];
-        if (searchQuery.isNotEmpty) {
-          searchResults = procedures.where((p) {
-            final name = p.name.toLowerCase();
-            final category = p.category?.toLowerCase() ?? '';
-            final query = searchQuery.toLowerCase();
-            return name.contains(query) || category.contains(query);
-          }).toList();
+        List<Procedure> searchResults = state.searchResults;
+        if (searchResults.isNotEmpty) {
+          searchResults = await _searchService.searchProcedures(
+            state.lastSearchQuery ?? '',
+            savedProceduresOnly: procedures,
+          );
         }
 
         emit(state.copyWith(
@@ -145,17 +155,14 @@ class SavedProceduresCubit extends Cubit<SavedProceduresState> {
     } catch (e) {
       // If there's an error, reload the actual state from database
       final procedures = await _sqliteService.getSavedProcedures();
-      final searchQuery = state.searchResults.isNotEmpty
-          ? state.procedures.firstOrNull?.name ?? ''
-          : '';
-      List<Procedure> searchResults = [];
-      if (searchQuery.isNotEmpty) {
-        searchResults = procedures.where((p) {
-          final name = p.name.toLowerCase();
-          final category = p.category?.toLowerCase() ?? '';
-          final query = searchQuery.toLowerCase();
-          return name.contains(query) || category.contains(query);
-        }).toList();
+
+      // Also update search results if there's an active search
+      List<Procedure> searchResults = state.searchResults;
+      if (searchResults.isNotEmpty && state.lastSearchQuery != null) {
+        searchResults = await _searchService.searchProcedures(
+          state.lastSearchQuery!,
+          savedProceduresOnly: procedures,
+        );
       }
 
       emit(state.copyWith(

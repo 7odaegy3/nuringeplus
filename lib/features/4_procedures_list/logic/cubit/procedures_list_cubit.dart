@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../../../core/database/sqflite_service.dart';
+import '../../../../core/services/search_service.dart';
 
 // Procedures List State
 class ProceduresListState extends Equatable {
@@ -8,6 +9,7 @@ class ProceduresListState extends Equatable {
   final List<Procedure> filteredProcedures;
   final String? categoryName;
   final bool isLoading;
+  final bool isSearching;
   final String? error;
 
   const ProceduresListState({
@@ -15,6 +17,7 @@ class ProceduresListState extends Equatable {
     this.filteredProcedures = const [],
     this.categoryName,
     this.isLoading = false,
+    this.isSearching = false,
     this.error,
   });
 
@@ -23,6 +26,7 @@ class ProceduresListState extends Equatable {
     List<Procedure>? filteredProcedures,
     String? categoryName,
     bool? isLoading,
+    bool? isSearching,
     String? error,
   }) {
     return ProceduresListState(
@@ -30,6 +34,7 @@ class ProceduresListState extends Equatable {
       filteredProcedures: filteredProcedures ?? this.filteredProcedures,
       categoryName: categoryName ?? this.categoryName,
       isLoading: isLoading ?? this.isLoading,
+      isSearching: isSearching ?? this.isSearching,
       error: error ?? this.error,
     );
   }
@@ -40,15 +45,19 @@ class ProceduresListState extends Equatable {
         filteredProcedures,
         categoryName,
         isLoading,
+        isSearching,
         error,
       ];
 }
 
 // Procedures List Cubit
 class ProceduresListCubit extends Cubit<ProceduresListState> {
-  final _sqliteService = SqliteService();
+  final SqliteService _sqliteService = SqliteService();
+  late final SearchService _searchService;
 
-  ProceduresListCubit() : super(const ProceduresListState());
+  ProceduresListCubit() : super(const ProceduresListState()) {
+    _searchService = SearchService(_sqliteService);
+  }
 
   Future<void> loadProcedures(String categoryName) async {
     try {
@@ -70,16 +79,27 @@ class ProceduresListCubit extends Cubit<ProceduresListState> {
     }
   }
 
-  void searchProcedures(String query) {
+  Future<void> searchProcedures(String query) async {
     if (query.isEmpty) {
       emit(state.copyWith(filteredProcedures: state.procedures));
       return;
     }
 
-    final filteredProcedures = state.procedures.where((procedure) {
-      return procedure.name.toLowerCase().contains(query.toLowerCase());
-    }).toList();
-
-    emit(state.copyWith(filteredProcedures: filteredProcedures));
+    try {
+      emit(state.copyWith(isSearching: true));
+      final results = await _searchService.searchProcedures(
+        query,
+        categoryFilter: state.categoryName,
+      );
+      emit(state.copyWith(
+        filteredProcedures: results,
+        isSearching: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        error: e.toString(),
+        isSearching: false,
+      ));
+    }
   }
 }

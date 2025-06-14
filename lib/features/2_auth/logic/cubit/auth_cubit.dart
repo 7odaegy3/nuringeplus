@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/api/firebase_service.dart';
 
 part 'auth_state.dart';
@@ -18,6 +19,13 @@ class AuthCubit extends Cubit<AuthState> {
 
       if (userCredential?.user != null) {
         print('Sign in successful. User ID: ${userCredential?.user?.uid}');
+
+        // Save user name to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            'user_name', userCredential?.user?.displayName ?? '');
+        await prefs.setBool('is_guest', false);
+
         emit(const AuthSuccess());
       } else {
         print('Sign in failed. UserCredential is null');
@@ -32,6 +40,12 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signOut() async {
     try {
       emit(const AuthLoading());
+
+      // Clear user data from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_name');
+      await prefs.setBool('is_guest', true);
+
       await _firebaseService.signOut();
       emit(const AuthInitial());
     } catch (e) {

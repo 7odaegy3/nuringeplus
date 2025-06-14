@@ -8,38 +8,38 @@ class AppTextStyles {
   static TextStyle h1 = GoogleFonts.cairo(
     fontSize: 24.sp,
     fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
+    color: AppColors.lightText,
   );
 
   static TextStyle h2 = GoogleFonts.cairo(
     fontSize: 20.sp,
     fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
+    color: AppColors.lightText,
   );
 
   static TextStyle h3 = GoogleFonts.cairo(
     fontSize: 18.sp,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
+    color: AppColors.lightText,
   );
 
   // Body Text
   static TextStyle bodyLarge = GoogleFonts.cairo(
     fontSize: 16.sp,
     fontWeight: FontWeight.normal,
-    color: AppColors.textPrimary,
+    color: AppColors.lightText,
   );
 
   static TextStyle bodyMedium = GoogleFonts.cairo(
     fontSize: 14.sp,
     fontWeight: FontWeight.normal,
-    color: AppColors.textPrimary,
+    color: AppColors.lightText,
   );
 
   static TextStyle bodySmall = GoogleFonts.cairo(
     fontSize: 12.sp,
     fontWeight: FontWeight.normal,
-    color: AppColors.textSecondary,
+    color: AppColors.lightTextSecondary,
   );
 
   // Button Text
@@ -59,19 +59,42 @@ class AppTextStyles {
   static TextStyle implementationStep = GoogleFonts.roboto(
     fontSize: 14.sp,
     fontWeight: FontWeight.normal,
-    color: AppColors.textPrimary,
+    color: AppColors.lightText,
   );
 
   // Labels and Captions
   static TextStyle label = GoogleFonts.cairo(
     fontSize: 12.sp,
     fontWeight: FontWeight.w500,
-    color: AppColors.textSecondary,
+    color: AppColors.lightTextSecondary,
   );
 
   static TextStyle caption = GoogleFonts.cairo(
     fontSize: 10.sp,
     fontWeight: FontWeight.normal,
-    color: AppColors.textLight,
+    color: AppColors.lightTextDisabled,
   );
+
+  // Get theme-aware text style
+  static TextStyle getThemedStyle(TextStyle style, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = style.color;
+
+    if (color == AppColors.lightText) {
+      return style.copyWith(
+          color: isDark ? AppColors.darkText : AppColors.lightText);
+    } else if (color == AppColors.lightTextSecondary) {
+      return style.copyWith(
+          color: isDark
+              ? AppColors.darkTextSecondary
+              : AppColors.lightTextSecondary);
+    } else if (color == AppColors.lightTextDisabled) {
+      return style.copyWith(
+          color: isDark
+              ? AppColors.darkTextDisabled
+              : AppColors.lightTextDisabled);
+    }
+
+    return style;
+  }
 }

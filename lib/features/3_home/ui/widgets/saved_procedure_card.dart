@@ -16,6 +16,10 @@ class SavedProcedureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final cardColor = isDark ? AppColors.darkCard : AppColors.lightCard;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -23,20 +27,23 @@ class SavedProcedureCard extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.primary.withOpacity(0.2),
-              AppColors.primary.withOpacity(0.1),
+              AppColors.primary.withOpacity(isDark ? 0.3 : 0.2),
+              AppColors.primary.withOpacity(isDark ? 0.15 : 0.1),
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(16.r),
+          boxShadow: isDark
+              ? AppColors.getDarkShadow(opacity: 0.2)
+              : AppColors.getLightShadow(),
         ),
         child: Text(
           procedure.name,
           textAlign: TextAlign.right,
           style: AppTextStyles.bodyLarge.copyWith(
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textColor,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
