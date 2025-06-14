@@ -173,8 +173,8 @@ class _SavedProceduresScreenState extends State<SavedProceduresScreen> {
                       height: 100.w,
                       child: CircularProgressIndicator(
                         strokeWidth: 8.w,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.primary),
                         backgroundColor: AppColors.primary.withOpacity(0.2),
                       ),
                     ),

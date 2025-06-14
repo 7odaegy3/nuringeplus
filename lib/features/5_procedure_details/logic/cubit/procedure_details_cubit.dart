@@ -20,14 +20,6 @@ class ProcedureDetailsCubit extends Cubit<ProcedureDetailsState> {
     try {
       final procedure = await _sqliteService.getProcedureById(procedureId);
 
-      if (procedure == null) {
-        emit(state.copyWith(
-          isLoading: false,
-          error: 'Procedure not found',
-        ));
-        return;
-      }
-
       // Here you could potentially load saved status based on _userId
 
       emit(state.copyWith(

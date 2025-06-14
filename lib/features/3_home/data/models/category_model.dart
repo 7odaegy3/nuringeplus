@@ -9,6 +9,7 @@ class CategoryModel extends Equatable {
     required this.id,
     required this.nameAr,
     this.iconName,
+    required int proceduresCount,
   });
 
   @override
@@ -16,4 +17,6 @@ class CategoryModel extends Equatable {
 
   @override
   bool get stringify => true;
+
+  get proceduresCount => null;
 }

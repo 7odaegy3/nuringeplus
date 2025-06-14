@@ -73,9 +73,7 @@ class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen>
 
   Future<void> _toggleSave() async {
     final procedure = await _sqliteService.getProcedureById(widget.procedureId);
-    if (procedure != null) {
-      context.read<SavedProceduresCubit>().toggleSaveProcedure(procedure);
-    }
+    context.read<SavedProceduresCubit>().toggleSaveProcedure(procedure);
   }
 
   @override
@@ -230,7 +228,7 @@ class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen>
                 leading: IconButton(
                   icon: Container(
                     padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.black12,
                       shape: BoxShape.circle,
                     ),
@@ -248,7 +246,7 @@ class _ProcedureDetailsScreenState extends State<ProcedureDetailsScreen>
                         child: IconButton(
                           icon: Container(
                             padding: EdgeInsets.all(8.w),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.black12,
                               shape: BoxShape.circle,
                             ),

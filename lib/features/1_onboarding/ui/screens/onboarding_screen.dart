@@ -22,19 +22,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'title': 'مرحباً بك في نيرسنج بلس',
       'description':
           'تطبيق شامل يساعدك في تعلم وتطبيق الإجراءات التمريضية بشكل صحيح وآمن.',
-      'image': 'assets/images/onboarding1.png',
+      'image': 'assets/images/1.png',
     },
     {
       'title': 'خطوات مفصلة وواضحة',
       'description':
           'شرح تفصيلي لكل إجراء مع توضيح الأسباب العلمية وراء كل خطوة.',
-      'image': 'assets/images/onboarding2.png',
+      'image': 'assets/images/2.png',
     },
     {
       'title': 'احفظ تقدمك وتعلم في أي وقت',
       'description':
           'يمكنك حفظ الإجراءات المفضلة وتتبع تقدمك في التعلم بسهولة.',
-      'image': 'assets/images/onboarding3.png',
+      'image': 'assets/images/3.png',
     },
   ];
 
@@ -110,10 +110,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onPressed: _completeOnboarding,
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size(double.infinity, 56.h),
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
                       ),
-                      child: Text(
-                        'ابدأ الآن',
-                        style: AppTextStyles.buttonLarge,
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF5B2EFF), Color(0xFF8F6BFF)],
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                          ),
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
+                        child: Container(
+                          alignment: Alignment.center,
+                          height: 56.h,
+                          child: Text(
+                            'ابدأ الآن',
+                            style: AppTextStyles.buttonLarge.copyWith(
+                              fontFamily: 'ReadexPro',
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

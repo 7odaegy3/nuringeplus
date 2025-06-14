@@ -130,7 +130,7 @@ class SettingsScreen extends StatelessWidget {
                                   AppRouter.goToLogin(context);
                                 }
                               },
-                              child: Text(
+                              child: const Text(
                                 'تأكيد',
                                 style: TextStyle(
                                   color: AppColors.error,

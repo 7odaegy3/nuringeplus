@@ -5,7 +5,6 @@ import '../../../../core/api/firebase_service.dart';
 import '../../../../core/database/sqflite_service.dart';
 import '../../../../core/services/search_service.dart';
 import '../../data/models/category_model.dart';
-import 'home_state.dart';
 
 // Home States
 class HomeState extends Equatable {
@@ -96,12 +95,14 @@ class HomeCubit extends Cubit<HomeState> {
               nameAr: p.category!,
               iconName: p.categoryIcon,
               proceduresCount: 1,
+              id: 1,
             );
           } else {
             categoriesMap[p.category!] = CategoryModel(
               nameAr: category.nameAr,
               iconName: category.iconName,
-              proceduresCount: category.proceduresCount + 1,
+              proceduresCount: (category.proceduresCount ?? 0) + 1,
+              id: 1,
             );
           }
         }

@@ -72,8 +72,9 @@ class SearchService {
 
       // Partial word matches
       if (name.split(' ').any((word) => word.startsWith(keyword))) score += 2;
-      if (category.split(' ').any((word) => word.startsWith(keyword)))
+      if (category.split(' ').any((word) => word.startsWith(keyword))) {
         score += 1.5;
+      }
     }
 
     // Bonus for matching multiple keywords

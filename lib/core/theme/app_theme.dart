@@ -23,7 +23,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: AppColors.lightText),
+        iconTheme: const IconThemeData(color: AppColors.lightText),
         titleTextStyle: TextStyle(
           color: AppColors.lightText,
           fontSize: 20.sp,
@@ -132,7 +132,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: AppColors.darkText),
+        iconTheme: const IconThemeData(color: AppColors.darkText),
         titleTextStyle: TextStyle(
           color: AppColors.darkText,
           fontSize: 20.sp,

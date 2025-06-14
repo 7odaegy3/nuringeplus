@@ -104,7 +104,7 @@ class ProceduresListScreen extends StatelessWidget {
                     SizedBox(
                       width: 50.w,
                       height: 50.w,
-                      child: CircularProgressIndicator(
+                      child: const CircularProgressIndicator(
                         valueColor:
                             AlwaysStoppedAnimation<Color>(AppColors.primary),
                         strokeWidth: 3,
@@ -451,10 +451,10 @@ class _ProcedureCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 16.sp,
                             height: 1.2,
-                            shadows: [
+                            shadows: const [
                               Shadow(
                                 color: Colors.black26,
-                                offset: const Offset(0, 2),
+                                offset: Offset(0, 2),
                                 blurRadius: 4,
                               ),
                             ],
